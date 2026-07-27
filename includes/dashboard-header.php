@@ -22,6 +22,38 @@ $isParishioner = ($_SESSION['role'] ?? '') === 'parishioner';
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/dashboard.css?v=2">
 <link rel="stylesheet" href="assets/css/dashboard-sidebar.css?v=2">
+
+<style>
+.dp-tabs{ position:relative; display:flex; background:var(--cream-deep,#f4ede0); border-radius:10px; padding:3px; margin-bottom:12px; }
+.dp-tab{ flex:1; position:relative; z-index:2; background:none; border:none; padding:8px 4px; font-family:var(--font-mono); font-size:10.5px; letter-spacing:.5px; text-transform:uppercase; color:var(--ink-soft,#7a7264); cursor:pointer; border-radius:8px; transition:color .2s; }
+.dp-tab.active{ color:var(--navy,#16223F); font-weight:600; }
+.dp-tab-indicator{ position:absolute; top:3px; left:3px; width:calc(50% - 3px); height:calc(100% - 6px); background:#fff; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,.08); transition:transform .25s ease; z-index:1; }
+.dp-tab-panels{ position:relative; }
+.dp-tab-panel{ display:none; }
+.dp-tab-panel.active{ display:block; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.dp-tabs').forEach(function (tabs) {
+    var indicator = tabs.querySelector('.dp-tab-indicator');
+    var buttons = tabs.querySelectorAll('.dp-tab');
+    var panelsWrap = tabs.nextElementSibling;
+
+    buttons.forEach(function (btn, i) {
+      btn.addEventListener('click', function () {
+        buttons.forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        indicator.style.transform = 'translateX(' + (i * 100) + '%)';
+
+        panelsWrap.querySelectorAll('.dp-tab-panel').forEach(function (p) { p.classList.remove('active'); });
+        document.getElementById(btn.dataset.dpTab).classList.add('active');
+      });
+    });
+  });
+});
+</script>
+
 </head>
 <body class="dash-body">
 
@@ -59,7 +91,19 @@ $isParishioner = ($_SESSION['role'] ?? '') === 'parishioner';
                 <?php if (!empty($unreadCount)): ?><span class="icon-badge"><?php echo $unreadCount; ?></span><?php endif; ?>
               </button>
               <div class="dropdown-panel dp-notif" data-dropdown="notif">
-                <?php echo $notifPanelHtml; ?>
+                <?php if (isset($activityPanelHtml)): ?>
+                  <div class="dp-tabs">
+                    <button type="button" class="dp-tab active" data-dp-tab="dpTabNotifs">Notifications</button>
+                    <button type="button" class="dp-tab" data-dp-tab="dpTabActivity">Recent Activity</button>
+                    <span class="dp-tab-indicator"></span>
+                  </div>
+                  <div class="dp-tab-panels">
+                    <div class="dp-tab-panel active" id="dpTabNotifs"><?php echo $notifPanelHtml; ?></div>
+                    <div class="dp-tab-panel" id="dpTabActivity"><?php echo $activityPanelHtml; ?></div>
+                  </div>
+                <?php else: ?>
+                  <?php echo $notifPanelHtml; ?>
+                <?php endif; ?>
               </div>
             </div>
           <?php endif; ?>
