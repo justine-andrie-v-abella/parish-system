@@ -1,4 +1,5 @@
-<?php
+ <?php
+ //intentions.php
 require_once 'includes/config.php';
 require_role(['parishioner']);
 require_once 'includes/db.php';
@@ -38,7 +39,73 @@ $calendarPanelHtml = render_calendar_fragment($pdo, $month, $year);
 
 $page_title = 'My Intentions — ' . $parish['name'];
 require_once 'includes/dashboard-header.php';
+
+// Real QR code, if the parish has uploaded one. Otherwise show a clearly
+// labeled placeholder instead of anything that looks scannable/real.
+$gcashQrPath = 'assets/images/gcash-qr.png';
+$hasRealQr = file_exists(__DIR__ . '/' . $gcashQrPath);
 ?>
+
+<style>
+/* Scoped styles for the 2-step booking modal's payment step.
+   Safe to move into assets/css/dashboard.css later if you'd rather
+   keep all dashboard styling in one file — kept inline here so it
+   doesn't touch/override anything already in your stylesheet. */
+.modal-steps{ display:flex; align-items:center; gap:8px; margin-bottom:18px; }
+.modal-step-dot{
+  width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family: var(--font-mono); font-size:11px; font-weight:600;
+  background: var(--cream-deep); color: var(--ink-soft); border:1px solid var(--line);
+}
+.modal-step-dot.active{ background: var(--navy); color:#fff; border-color: var(--navy); }
+.modal-step-dot.done{ background: var(--gold); color: var(--navy-deep); border-color: var(--gold); }
+.modal-step-line{ flex:1; height:1px; background: var(--line); }
+.modal-step-label{ font-family: var(--font-mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color: var(--ink-soft); }
+
+.modal-substep{ display:none; }
+.modal-substep.active{ display:block; }
+
+.pm-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px; }
+.pm-card{ position:relative; }
+.pm-card input{ position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
+.pm-card label{
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  border:1px solid var(--line); border-radius:14px; padding:18px 10px; text-align:center; cursor:pointer;
+  transition: all .18s; font-size:13px; color: var(--ink-soft);
+}
+.pm-card label svg{ width:24px; height:24px; color: var(--gold-dim); }
+.pm-card input:checked + label{ border-color: var(--gold); background: var(--cream-deep); color:var(--navy); font-weight:600; }
+
+.gcash-panel, .cash-panel{ display:none; }
+.gcash-panel.show, .cash-panel.show{ display:block; }
+
+.qr-box{
+  width:180px; height:180px; margin: 0 auto 14px; border-radius:14px; border:1px dashed var(--line);
+  display:flex; align-items:center; justify-content:center; overflow:hidden; background: var(--cream-deep);
+}
+.qr-box img{ width:100%; height:100%; object-fit:contain; }
+.qr-placeholder{ text-align:center; padding:14px; color: var(--ink-soft); font-size:11.5px; }
+.qr-placeholder svg{ width:32px; height:32px; margin: 0 auto 8px; color: var(--gold-dim); }
+
+.upload-drop{
+  border:1.5px dashed var(--line); border-radius:14px; padding:18px; text-align:center; cursor:pointer;
+  transition: border-color .18s; position:relative;
+}
+.upload-drop:hover{ border-color: var(--gold); }
+.upload-drop input[type=file]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+.upload-drop .up-icon{ width:26px; height:26px; margin:0 auto 8px; color: var(--gold-dim); }
+.upload-drop p{ font-size:12.5px; color: var(--ink-soft); margin:0; }
+.upload-preview{ display:none; margin-top:12px; text-align:center; }
+.upload-preview.show{ display:block; }
+.upload-preview img{ max-width:140px; max-height:140px; border-radius:10px; border:1px solid var(--line); }
+.upload-preview .up-filename{ font-size:11.5px; color: var(--ink-soft); margin-top:6px; word-break:break-all; }
+
+.cash-reminder{
+  display:flex; gap:10px; align-items:flex-start; background:#FBF1DD; border:1px solid var(--gold);
+  border-radius:12px; padding:14px; font-size:13px; color: var(--brown);
+}
+.cash-reminder svg{ width:18px; height:18px; flex-shrink:0; color: var(--gold-dim); }
+</style>
 
 <div class="page-head">
   <span class="eyebrow">My Intentions</span>
@@ -79,7 +146,8 @@ require_once 'includes/dashboard-header.php';
       <button type="button" class="btn btn-gold btn-book"
         data-book-btn
         data-service-key="<?php echo htmlspecialchars($svc['key']); ?>"
-        data-service-name="<?php echo htmlspecialchars($svc['name']); ?>">
+        data-service-name="<?php echo htmlspecialchars($svc['name']); ?>"
+        data-service-fee="<?php echo (int) $svc['fee']; ?>">
         Request This
       </button>
     </div>
@@ -94,37 +162,120 @@ require_once 'includes/dashboard-header.php';
       <button type="button" class="modal-close" id="modalClose" aria-label="Close">&times;</button>
     </div>
 
-    <form id="bookingForm">
+    <div class="modal-steps">
+      <span class="modal-step-dot active" id="stepDot1">1</span>
+      <span class="modal-step-label">Details</span>
+      <span class="modal-step-line"></span>
+      <span class="modal-step-dot" id="stepDot2">2</span>
+      <span class="modal-step-label">Payment</span>
+    </div>
+
+    <form id="bookingForm" enctype="multipart/form-data">
       <input type="hidden" name="service_key" id="serviceKeyInput">
 
-      <div class="form-group">
-        <label for="apptDate">Preferred Date</label>
-        <input type="date" name="appointment_date" id="apptDate" min="<?php echo date('Y-m-d'); ?>" required>
+      <!-- Step 1: appointment details -->
+      <div class="modal-substep active" id="stepDetails">
+        <div class="form-group">
+          <label for="apptDate">Preferred Date</label>
+          <input type="date" name="appointment_date" id="apptDate" min="<?php echo date('Y-m-d'); ?>" required>
+        </div>
+
+        <div class="form-group">
+          <label>Available Time Slots</label>
+          <div id="slotGrid" class="slot-grid"><p class="slot-empty">Choose a date to see open times.</p></div>
+          <input type="hidden" name="appointment_time" id="apptTimeInput">
+          <p class="slot-hint">Times already taken are greyed out and can't be selected. First come, first served — the office still needs to confirm your request.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="apptNotes">Notes (optional)</label>
+          <textarea name="notes" id="apptNotes" maxlength="255" placeholder="Anything the parish office should know (names, occasion, special requests)."></textarea>
+        </div>
+
+        <p class="form-error" id="formErrorStep1"></p>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline btn-sm" id="modalCancel">Cancel</button>
+          <button type="button" class="btn btn-gold btn-sm" id="goToPayment">Next: Payment →</button>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label>Available Time Slots</label>
-        <div id="slotGrid" class="slot-grid"><p class="slot-empty">Choose a date to see open times.</p></div>
-        <input type="hidden" name="appointment_time" id="apptTimeInput">
-        <p class="slot-hint">Times already taken are greyed out and can't be selected. First come, first served — the office still needs to confirm your request.</p>
-      </div>
+      <!-- Step 2: payment -->
+      <div class="modal-substep" id="stepPayment">
+        <div class="form-group">
+          <label>Estimated Fee: <b id="feeDisplay">₱0</b></label>
+        </div>
 
-      <div class="form-group">
-        <label for="apptNotes">Notes (optional)</label>
-        <textarea name="notes" id="apptNotes" maxlength="255" placeholder="Anything the parish office should know (names, occasion, special requests)."></textarea>
-      </div>
+        <div class="form-group">
+          <label>Payment Method</label>
+          <div class="pm-grid">
+            <div class="pm-card">
+              <input type="radio" name="payment_method" id="pmCash" value="cash" checked>
+              <label for="pmCash">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg>
+                Cash
+              </label>
+            </div>
+            <div class="pm-card">
+              <input type="radio" name="payment_method" id="pmGcash" value="gcash">
+              <label for="pmGcash">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg>
+                GCash
+              </label>
+            </div>
+          </div>
+        </div>
 
-      <p class="form-error" id="formError"></p>
-      <p class="form-success" id="formSuccess"></p>
+        <div class="cash-panel show" id="cashPanel">
+          <div class="cash-reminder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+            <span>Please settle payment in cash at the parish office. Bring this confirmation with you.</span>
+          </div>
+        </div>
 
-      <div class="modal-actions">
-        <button type="button" class="btn btn-outline btn-sm" id="modalCancel">Cancel</button>
-        <button type="submit" class="btn btn-gold btn-sm" id="modalSubmit">Submit Request</button>
+        <div class="gcash-panel" id="gcashPanel">
+          <div class="qr-box">
+            <?php if ($hasRealQr): ?>
+              <img src="<?php echo htmlspecialchars($gcashQrPath); ?>" alt="Parish GCash QR code">
+            <?php else: ?>
+              <div class="qr-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z"/></svg>
+                QR code placeholder — parish office will confirm your reference number
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <div class="form-group">
+            <label for="referenceNumber">GCash Reference Number</label>
+            <input type="text" name="reference_number" id="referenceNumber" maxlength="50" placeholder="e.g. 1234567890">
+          </div>
+
+          <div class="form-group">
+            <label>Upload Payment Screenshot</label>
+            <div class="upload-drop" id="uploadDrop">
+              <svg class="up-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+              <p>Click or drag your GCash payment screenshot here (JPG, PNG, WEBP — max 5MB)</p>
+              <input type="file" name="screenshot" id="screenshotInput" accept="image/jpeg,image/png,image/webp">
+            </div>
+            <div class="upload-preview" id="uploadPreview">
+              <img id="previewImg" src="" alt="Screenshot preview">
+              <div class="up-filename" id="previewFilename"></div>
+            </div>
+          </div>
+        </div>
+
+        <p class="form-error" id="formErrorStep2"></p>
+        <p class="form-success" id="formSuccess"></p>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline btn-sm" id="backToDetails">← Back</button>
+          <button type="submit" class="btn btn-gold btn-sm" id="modalSubmit">Submit Request</button>
+        </div>
       </div>
     </form>
   </div>
 </div>
 
-<script src="assets/js/intentions.js"></script>
+<script src="assets/js/intentions.js?v=<?php echo time(); ?>"></script>
 
 <?php require_once 'includes/dashboard-footer.php'; ?>
