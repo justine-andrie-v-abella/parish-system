@@ -9,6 +9,7 @@ foreach (explode(' ', $_SESSION['full_name'] ?? '') as $part) {
     if ($part !== '') $initials .= strtoupper($part[0]);
 }
 $initials = substr($initials, 0, 2);
+$isParishioner = ($_SESSION['role'] ?? '') === 'parishioner';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -20,14 +21,22 @@ $initials = substr($initials, 0, 2);
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Jost:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/dashboard.css?v=2">
+<link rel="stylesheet" href="assets/css/dashboard-sidebar.css?v=2">
 </head>
 <body class="dash-body">
 
 <div class="dash-topbar">
   <div class="dash-topbar-inner">
-    <div class="dash-brand">
-      <svg width="32" height="32" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="23" fill="#16223F"/><circle cx="24" cy="24" r="23" stroke="#C6A15B" stroke-width="1"/><path d="M24 10V38M14 18H34M24 10C20 14 20 18 24 21C28 18 28 14 24 10Z" stroke="#E7C883" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span><strong><?php echo htmlspecialchars($parish['name']); ?></strong><span>Management System</span></span>
+    <div class="dash-topbar-left">
+      <?php if ($isParishioner): ?>
+        <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Open menu" aria-expanded="false" aria-controls="dashSidebar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </button>
+      <?php endif; ?>
+      <div class="dash-brand">
+        <svg width="32" height="32" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="23" fill="#16223F"/><circle cx="24" cy="24" r="23" stroke="#C6A15B" stroke-width="1"/><path d="M24 10V38M14 18H34M24 10C20 14 20 18 24 21C28 18 28 14 24 10Z" stroke="#E7C883" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><strong><?php echo htmlspecialchars($parish['name']); ?></strong><span>Management System</span></span>
+      </div>
     </div>
     <div class="dash-user">
       <?php if (isset($calendarPanelHtml) || isset($notifPanelHtml)): ?>
@@ -65,4 +74,9 @@ $initials = substr($initials, 0, 2);
   </div>
 </div>
 
-<div class="dash-main">
+<div class="dash-shell">
+  <?php if ($isParishioner): ?>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <?php require_once __DIR__ . '/sidebar.php'; ?>
+  <?php endif; ?>
+  <div class="dash-main">
