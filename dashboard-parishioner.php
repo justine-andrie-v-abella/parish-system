@@ -1,4 +1,5 @@
 <?php
+//dashboard-parishioner.php
 require_once 'includes/config.php';
 require_role(['parishioner']);
 require_once 'includes/db.php';
@@ -116,10 +117,18 @@ ob_start();
 <div class="cal-head">
   <span class="cal-title"><?php echo date('F Y', strtotime($firstOfMonth)); ?></span>
   <div class="cal-nav">
-    <a href="?month=<?php echo $prevMonth; ?>&year=<?php echo $prevYear; ?>" aria-label="Previous month">
+    <a href="?month=<?php echo $prevMonth; ?>&year=<?php echo $prevYear; ?>"
+       class="cal-nav-link"
+       data-month="<?php echo $prevMonth; ?>"
+       data-year="<?php echo $prevYear; ?>"
+       aria-label="Previous month">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
     </a>
-    <a href="?month=<?php echo $nextMonth; ?>&year=<?php echo $nextYear; ?>" aria-label="Next month">
+    <a href="?month=<?php echo $nextMonth; ?>&year=<?php echo $nextYear; ?>"
+       class="cal-nav-link"
+       data-month="<?php echo $nextMonth; ?>"
+       data-year="<?php echo $nextYear; ?>"
+       aria-label="Next month">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
     </a>
   </div>
@@ -155,6 +164,29 @@ ob_start();
 </div>
 <?php
 $calendarPanelHtml = ob_get_clean();
+
+// ---------------- Recent activity panel for header dropdown ----------------
+ob_start();
+?>
+<h4>Recent Activity</h4>
+<?php if (empty($activity)): ?>
+  <p class="upcoming-empty">No activity yet.</p>
+<?php else: ?>
+  <?php foreach ($activity as $a):
+      $svcName = $serviceNames[$a['service_key']] ?? ucfirst($a['service_key']);
+      $verb = $activityText[$a['status']] ?? 'updated';
+  ?>
+    <div class="notif-item">
+      <span class="notif-dot"></span>
+      <div>
+        <p>Your <strong><?php echo htmlspecialchars($svcName); ?></strong> request <?php echo $verb; ?>.</p>
+        <span class="time"><?php echo date('M j, g:i A', strtotime($a['updated_at'])); ?></span>
+      </div>
+    </div>
+  <?php endforeach; ?>
+<?php endif; ?>
+<?php
+$activityPanelHtml = ob_get_clean();
 
 // ---------------- Capture notifications markup for the header dropdown ----------------
 ob_start();
