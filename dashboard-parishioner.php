@@ -206,7 +206,7 @@ require_once 'includes/dashboard-header.php';
         </div>
       <?php else: ?>
         <p class="upcoming-empty">No upcoming appointments yet.</p>
-        <a href="coming-soon.php?feature=New+Appointment" class="btn btn-gold btn-sm" style="margin-top:10px;">Book one now</a>
+        <a href="intentions.php" class="btn btn-gold btn-sm" style="margin-top:10px;">Book one now</a>
       <?php endif; ?>
     </div>
   </div>
@@ -249,11 +249,11 @@ require_once 'includes/dashboard-header.php';
 <!-- Quick actions -->
 <div class="dash-section-label"><h2>Quick Actions</h2></div>
 <div class="quick-actions">
-  <a href="coming-soon.php?feature=New+Appointment" class="quick-action">
+  <a href="intentions.php" class="quick-action">
     <div class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg></div>
     <span>New Appointment</span>
   </a>
-  <a href="coming-soon.php?feature=View+Requests" class="quick-action">
+  <a href="requests.php" class="quick-action">
     <div class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18M3 12h18M3 18h18"/></svg></div>
     <span>View Requests</span>
   </a>
