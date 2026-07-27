@@ -25,16 +25,32 @@ document.querySelectorAll('.tab-switch').forEach(switcher => {
 });
 
 // Header dropdowns (calendar / notifications bell icons)
+// Includes: open/close toggling, click-outside/escape-to-close, and
+// resetting the calendar dropdown back to the current month whenever it closes.
 (function () {
   const toggles = document.querySelectorAll('[data-dropdown-toggle]');
+  const calPanel = document.querySelector('.dropdown-panel[data-dropdown="cal"]');
+  // snapshot the current-month markup exactly as PHP rendered it on page load
+  const calDefaultHtml = calPanel ? calPanel.innerHTML : null;
+
+  function resetCalendarIfNeeded(panel) {
+    if (panel === calPanel && calDefaultHtml !== null) {
+      calPanel.innerHTML = calDefaultHtml;
+    }
+  }
+
   function closeAll(except) {
-    document.querySelectorAll('.dropdown-panel.open').forEach(p => {
-      if (p !== except) p.classList.remove('open');
+    document.querySelectorAll('.dropdown-panel.open').forEach(function (p) {
+      if (p !== except) {
+        p.classList.remove('open');
+        resetCalendarIfNeeded(p);
+      }
     });
-    document.querySelectorAll('.icon-btn.open').forEach(b => {
+    document.querySelectorAll('.icon-btn.open').forEach(function (b) {
       if (b !== except) { b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }
     });
   }
+
   toggles.forEach(btn => {
     const key = btn.dataset.dropdownToggle;
     const panel = document.querySelector(`.dropdown-panel[data-dropdown="${key}"]`);
@@ -51,6 +67,7 @@ document.querySelectorAll('.tab-switch').forEach(switcher => {
     });
     panel.addEventListener('click', (e) => e.stopPropagation());
   });
+
   document.addEventListener('click', () => closeAll());
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
 })();
