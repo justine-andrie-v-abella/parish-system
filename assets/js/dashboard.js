@@ -54,3 +54,33 @@ document.querySelectorAll('.tab-switch').forEach(switcher => {
   document.addEventListener('click', () => closeAll());
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
 })();
+
+// Calendar month navigation (prev/next inside the header calendar dropdown)
+(function () {
+  const panel = document.querySelector('.dropdown-panel.dp-calendar');
+  if (!panel) return;
+
+  function loadMonth(month, year) {
+    const params = new URLSearchParams({ month, year });
+    fetch('calendar-fragment.php?' + params.toString(), {
+      credentials: 'same-origin'
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to load calendar: ' + res.status);
+        return res.text();
+      })
+      .then(html => {
+        panel.innerHTML = html;
+      })
+      .catch(err => console.error(err));
+  }
+
+  // Delegated click handler — works for nav links even after panel.innerHTML is replaced
+  panel.addEventListener('click', (e) => {
+    const link = e.target.closest('.cal-nav-link');
+    if (!link) return;
+    e.preventDefault();
+    e.stopPropagation(); // don't let the outer dropdown-close-on-click handler fire
+    loadMonth(link.dataset.month, link.dataset.year);
+  });
+})();
