@@ -1,0 +1,256 @@
+/* ==========================================================================
+   Sidebar shell + My Intentions / View Requests page styles
+   assets/css/dashboard-sidebar.css
+
+   Loaded AFTER dashboard.css, so the rules below intentionally override
+   dashboard.css's fixed 1180px container to make the dashboard edge-to-edge
+   and fluid, instead of centered with dead space on wide screens.
+   ========================================================================== */
+
+/* ---------------- Full-bleed container (overrides dashboard.css) ---------------- */
+.dash-topbar-inner{
+  max-width: none;
+  padding-left: clamp(20px, 3vw, 44px);
+  padding-right: clamp(20px, 3vw, 44px);
+}
+.dash-topbar-left{ display:flex; align-items:center; gap:14px; }
+
+.dash-shell{
+  display:flex; align-items:flex-start;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  position: relative;
+}
+
+.dash-shell .dash-main{
+  flex:1; min-width:0; max-width:none; margin:0;
+  padding: 40px clamp(20px, 3vw, 44px) 80px;
+}
+
+/* ---------------- Sidebar (desktop: static column) ---------------- */
+.dash-sidebar{
+  width: 232px; flex-shrink:0; position: sticky; top: 78px;
+  padding: 40px 0 40px clamp(20px, 3vw, 44px);
+}
+.sidebar-mobile-head{ display:none; } /* desktop: hidden, shown only in the drawer */
+.sidebar-nav{ display:flex; flex-direction:column; gap:6px; }
+.sidebar-link{
+  display:flex; align-items:center; gap:12px; padding: 12px 16px;
+  border-radius: 14px; font-size:14px; color: var(--ink-soft); font-weight:500;
+  border: 1px solid transparent; transition: all .18s;
+}
+.sidebar-link:hover{ background: var(--cream-deep); color: var(--navy); }
+.sidebar-link.active{
+  background: var(--white); border-color: var(--line); color: var(--navy);
+  box-shadow: var(--shadow-soft);
+}
+.sidebar-icon{ width:20px; height:20px; flex-shrink:0; color: var(--gold-dim); display:flex; }
+.sidebar-icon svg{ width:100%; height:100%; }
+.sidebar-link.active .sidebar-icon{ color: var(--gold); }
+
+/* ---------------- Mobile hamburger toggle + overlay (hidden on desktop) ---------------- */
+.sidebar-toggle{
+  display:none; width:38px; height:38px; border-radius:50%; border:1px solid var(--line);
+  background: var(--white); color: var(--navy); align-items:center; justify-content:center;
+  flex-shrink:0; transition: all .18s;
+}
+.sidebar-toggle svg{ width:18px; height:18px; }
+.sidebar-toggle:hover{ border-color: var(--gold); background: var(--cream-deep); }
+
+.sidebar-overlay{
+  display:none;
+  position: fixed; inset:0; background: rgba(11,20,36,0.5); backdrop-filter: blur(2px);
+  z-index: 1000; opacity:0; pointer-events:none; transition: opacity .25s var(--ease);
+}
+.sidebar-overlay.open{ opacity:1; pointer-events:auto; }
+
+/* ---------------- Fluid grids (override dashboard.css fixed column counts) ---------------- */
+.dash-hero{ width:100%; }
+.summary-grid{
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+.quick-actions{
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+.dash-columns{ width:100%; }
+
+/* ---------------- Page header (Intentions / Requests) ---------------- */
+.page-head{ margin-bottom: 32px; }
+.page-head h1{ font-size: clamp(24px,3vw,30px); }
+.page-head p{ color: var(--ink-soft); font-size:14.5px; max-width:60ch; }
+
+/* ---------------- Intention (service) cards ---------------- */
+.intentions-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap:24px;
+}
+
+.intention-card{
+  background: var(--white); border:1px solid var(--line); border-radius: var(--arch);
+  padding: 30px 24px 24px; box-shadow: var(--shadow-soft);
+  transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+  display:flex; flex-direction:column;
+}
+.intention-card:hover{ transform: translateY(-4px); box-shadow: var(--shadow-lift); }
+.intention-card .service-icon{ width:52px; height:52px; margin-bottom:14px; }
+.intention-card h3{ font-size:19px; margin-bottom:6px; }
+.intention-card .desc{ color: var(--ink-soft); font-size:13.5px; min-height:40px; }
+.intention-card .service-fee{ font-size:13px; margin: 10px 0 4px; }
+
+.req-toggle{
+  background:none; border:none; padding:0; margin: 10px 0 4px; font-family: var(--font-mono);
+  font-size:11px; letter-spacing:1px; text-transform:uppercase; color: var(--gold-dim);
+  display:flex; align-items:center; gap:6px;
+}
+.req-toggle .plus{ transition: transform .2s var(--ease); }
+.req-toggle.open .plus{ transform: rotate(45deg); }
+.intention-reqs{ max-height:0; overflow:hidden; transition: max-height .3s var(--ease); }
+.intention-reqs.open{ max-height:280px; }
+.intention-reqs ul{ margin: 8px 0 0; padding-left: 0; list-style:none; display:flex; flex-direction:column; gap:6px; }
+.intention-reqs li{ font-size:13px; color:var(--ink-soft); display:flex; gap:8px; align-items:flex-start; }
+.intention-reqs li::before{ content:'✦'; color: var(--gold); font-size:10px; margin-top:3px; }
+
+.intention-card .btn{ width:100%; margin-top:auto; padding-top:14px; }
+.intention-card .btn-book{ margin-top:16px; }
+
+/* ---------------- Booking modal ---------------- */
+.modal-overlay{
+  position: fixed; inset:0; background: rgba(11,20,36,0.55); backdrop-filter: blur(3px);
+  z-index: 1000; display:flex; align-items:center; justify-content:center; padding: 20px;
+  opacity:0; pointer-events:none; transition: opacity .22s var(--ease);
+}
+.modal-overlay.open{ opacity:1; pointer-events:auto; }
+
+.modal-box{
+  background: var(--cream); border-radius: var(--arch); border:1px solid var(--line);
+  width: 460px; max-width:100%; max-height: 88vh; overflow-y:auto;
+  box-shadow: var(--shadow-lift); padding: 30px 28px;
+  transform: translateY(14px) scale(0.98); transition: transform .22s var(--ease);
+}
+.modal-overlay.open .modal-box{ transform:none; }
+
+.modal-head{ display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px; }
+.modal-head h3{ font-size:21px; margin:0; }
+.modal-close{ background:none; border:none; color: var(--ink-soft); font-size:20px; line-height:1; padding:4px; }
+.modal-close:hover{ color: var(--navy); }
+
+.form-group{ margin-bottom:18px; }
+.form-group label{ display:block; font-family: var(--font-mono); font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase; color: var(--ink-soft); margin-bottom:8px; }
+.form-group input[type="date"], .form-group textarea{
+  width:100%; border:1px solid var(--line); border-radius:12px; padding:11px 14px;
+  font-family: inherit; font-size:14px; background: var(--white); color: var(--ink);
+}
+.form-group input[type="date"]:focus, .form-group textarea:focus{ outline:none; border-color: var(--gold); }
+.form-group textarea{ resize: vertical; min-height:70px; }
+
+.slot-grid{ display:grid; grid-template-columns: repeat(4,1fr); gap:8px; }
+.slot-btn{
+  border:1px solid var(--line); background: var(--white); border-radius:10px;
+  padding: 9px 4px; font-size:12.5px; color: var(--navy); text-align:center;
+  transition: all .15s;
+}
+.slot-btn:hover:not(:disabled){ border-color: var(--gold); background: var(--cream-deep); }
+.slot-btn.selected{ background: var(--navy); color:#fff; border-color: var(--navy); }
+.slot-btn:disabled{ opacity:0.4; text-decoration: line-through; cursor:not-allowed; background: var(--cream-deep); }
+.slot-hint{ font-size:12px; color: var(--ink-soft); margin-top:8px; }
+.slot-empty{ font-size:13px; color: var(--ink-soft); padding: 10px 0; }
+
+.form-error{ font-size:12.5px; color:#A2432F; margin-top:8px; display:none; }
+.form-error.show{ display:block; }
+.form-success{ font-size:13.5px; color:#2F6B45; margin-top:8px; display:none; }
+.form-success.show{ display:block; }
+
+.modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:22px; }
+
+/* ---------------- Requests table ---------------- */
+.requests-table-wrap{ background: var(--white); border:1px solid var(--line); border-radius: var(--arch-sm); overflow:hidden; overflow-x:auto; }
+.requests-table{ width:100%; border-collapse: collapse; min-width: 640px; }
+.requests-table th{
+  text-align:left; font-family: var(--font-mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase;
+  color: var(--ink-soft); padding: 14px 18px; border-bottom:1px solid var(--line); background: var(--cream-deep);
+}
+.requests-table td{ padding: 14px 18px; border-bottom:1px dashed var(--line); font-size:13.5px; color: var(--ink); vertical-align:middle; }
+.requests-table tr:last-child td{ border-bottom:none; }
+.requests-table .svc-cell{ font-weight:500; color: var(--navy); }
+.requests-empty{ padding: 50px 20px; text-align:center; color: var(--ink-soft); }
+.requests-empty a{ color: var(--gold-dim); text-decoration:underline; }
+
+.btn-cancel-req{
+  font-family: var(--font-mono); font-size:11px; letter-spacing:0.5px; text-transform:uppercase;
+  color:#A2432F; background:none; border:1px solid #E9C8C0; border-radius:999px; padding:6px 12px;
+}
+.btn-cancel-req:hover{ background:#FBEAE7; }
+
+/* ==========================================================================
+   Responsive breakpoints
+   ========================================================================== */
+
+/* ---- Below 860px: sidebar becomes an off-canvas drawer ---- */
+@media (max-width: 860px){
+  .sidebar-toggle{ display:flex; }
+  .sidebar-overlay{ display:block; }
+
+  .dash-shell{ display:block; } /* sidebar is now position:fixed, out of flow */
+  .dash-shell .dash-main{ padding: 24px clamp(16px, 4vw, 32px) 70px; }
+
+  .dash-sidebar{
+    position: fixed; top:0; left:0; height:100vh; width: 260px; max-width: 78vw;
+    background: var(--cream); z-index: 1001;
+    padding: 18px 18px 24px;
+    transform: translateX(-100%);
+    transition: transform .28s var(--ease);
+    box-shadow: var(--shadow-lift);
+    overflow-y: auto;
+  }
+  .dash-sidebar.open{ transform: translateX(0); }
+
+  .sidebar-mobile-head{
+    display:flex; align-items:center; justify-content:space-between;
+    font-family: var(--font-display); font-size:18px; color: var(--navy); font-weight:600;
+    padding-bottom:14px; margin-bottom:12px; border-bottom:1px solid var(--line);
+  }
+  .sidebar-close{ background:none; border:none; font-size:24px; line-height:1; color: var(--ink-soft); padding:4px; }
+  .sidebar-close:hover{ color: var(--navy); }
+
+  .sidebar-nav{ flex-direction:column; gap:4px; }
+}
+
+/* ---- Phone: scale everything down so it reads as a compact mobile
+   layout instead of a shrunk desktop one ---- */
+@media (max-width: 560px){
+  .dash-topbar-inner{ padding: 10px 16px; gap:10px; }
+  .dash-role-badge, .dash-brand span, .dash-username{ display:none; } /* trim clutter, keep toggle + logo + avatar */
+  .dash-brand strong{ font-size:14.5px; }
+  .dash-topbar-left{ gap:10px; }
+
+  .dash-shell .dash-main{ padding: 16px 16px 56px; }
+
+  .dash-hero{ padding: 24px 20px; border-radius: 28px 28px 8px 8px; }
+  .dash-hero h1{ font-size:22px; }
+  .dash-hero p{ font-size:13px; }
+  .hero-upcoming{ padding:14px; }
+
+  .summary-grid{ grid-template-columns: repeat(2, 1fr); gap:10px; margin-bottom:24px; }
+  .summary-card{ padding:14px 12px; }
+  .summary-card .num{ font-size:24px; }
+  .summary-card .lbl{ font-size:9px; }
+
+  .dash-section-label h2{ font-size:16px; }
+  .quick-actions{ grid-template-columns: repeat(2, 1fr); gap:10px; }
+  .quick-action{ padding:14px; }
+  .quick-action .qa-icon{ width:34px; height:34px; }
+  .quick-action span{ font-size:12px; }
+
+  .page-head h1{ font-size:21px; }
+  .page-head p{ font-size:13px; }
+
+  .intentions-grid{ grid-template-columns: 1fr; gap:16px; }
+  .intention-card{ padding:22px 18px 18px; }
+
+  .modal-box{ padding:22px 18px; border-radius: 28px 28px 8px 8px; }
+  .slot-grid{ grid-template-columns: repeat(3,1fr); }
+
+  .requests-table th, .requests-table td{ padding: 10px 12px; font-size:12.5px; }
+}

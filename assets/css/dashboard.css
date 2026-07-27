@@ -1,6 +1,7 @@
 /* ==========================================================================
    Dashboard shell — shared topbar + "coming soon" layout used by all four
    role dashboards until each one gets its full build-out.
+   assets/css/dashboard.css
    ========================================================================== */
 
 .dash-body{ background: var(--cream); min-height:100vh; }
