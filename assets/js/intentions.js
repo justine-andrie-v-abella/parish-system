@@ -1,3 +1,4 @@
+//assets\js\intentions.js
 document.addEventListener('DOMContentLoaded', function () {
   // Requirements accordion on each card
   document.querySelectorAll('[data-req-toggle]').forEach(function (btn) {
@@ -11,25 +12,87 @@ document.addEventListener('DOMContentLoaded', function () {
   var modal = document.getElementById('bookingModal');
   var modalServiceName = document.getElementById('modalServiceName');
   var serviceKeyInput = document.getElementById('serviceKeyInput');
+  var feeDisplay = document.getElementById('feeDisplay');
+
+  // Step 1 elements
+  var stepDetails = document.getElementById('stepDetails');
+  var stepPayment = document.getElementById('stepPayment');
+  var stepDot1 = document.getElementById('stepDot1');
+  var stepDot2 = document.getElementById('stepDot2');
   var dateInput = document.getElementById('apptDate');
   var slotGrid = document.getElementById('slotGrid');
   var timeInput = document.getElementById('apptTimeInput');
   var notesInput = document.getElementById('apptNotes');
-  var form = document.getElementById('bookingForm');
-  var formError = document.getElementById('formError');
+  var formErrorStep1 = document.getElementById('formErrorStep1');
+  var goToPaymentBtn = document.getElementById('goToPayment');
+
+  // Step 2 elements
+  var backToDetailsBtn = document.getElementById('backToDetails');
+  var pmCash = document.getElementById('pmCash');
+  var pmGcash = document.getElementById('pmGcash');
+  var cashPanel = document.getElementById('cashPanel');
+  var gcashPanel = document.getElementById('gcashPanel');
+  var referenceNumberInput = document.getElementById('referenceNumber');
+  var screenshotInput = document.getElementById('screenshotInput');
+  var uploadPreview = document.getElementById('uploadPreview');
+  var previewImg = document.getElementById('previewImg');
+  var previewFilename = document.getElementById('previewFilename');
+  var formErrorStep2 = document.getElementById('formErrorStep2');
   var formSuccess = document.getElementById('formSuccess');
+  var form = document.getElementById('bookingForm');
   var submitBtn = document.getElementById('modalSubmit');
 
-  function openModal(serviceKey, serviceName) {
+  function formatPeso(n) {
+    return '₱' + Number(n).toLocaleString();
+  }
+
+  function showStep(stepNum) {
+    if (stepNum === 1) {
+      stepDetails.classList.add('active');
+      stepPayment.classList.remove('active');
+      stepDot1.classList.add('active');
+      stepDot1.classList.remove('done');
+      stepDot2.classList.remove('active');
+    } else {
+      stepDetails.classList.remove('active');
+      stepPayment.classList.add('active');
+      stepDot1.classList.remove('active');
+      stepDot1.classList.add('done');
+      stepDot2.classList.add('active');
+    }
+  }
+
+  function togglePaymentPanels() {
+    var isGcash = pmGcash.checked;
+    gcashPanel.classList.toggle('show', isGcash);
+    cashPanel.classList.toggle('show', !isGcash);
+    referenceNumberInput.required = isGcash;
+    screenshotInput.required = isGcash;
+  }
+
+  function openModal(serviceKey, serviceName, serviceFee) {
     serviceKeyInput.value = serviceKey;
     modalServiceName.textContent = 'Request ' + serviceName;
+    feeDisplay.textContent = formatPeso(serviceFee || 0);
+
     dateInput.value = '';
     timeInput.value = '';
     notesInput.value = '';
     slotGrid.innerHTML = '<p class="slot-empty">Choose a date to see open times.</p>';
-    formError.classList.remove('show');
+
+    pmCash.checked = true;
+    referenceNumberInput.value = '';
+    screenshotInput.value = '';
+    uploadPreview.classList.remove('show');
+    togglePaymentPanels();
+
+    formErrorStep1.classList.remove('show');
+    formErrorStep2.classList.remove('show');
     formSuccess.classList.remove('show');
     submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit Request';
+
+    showStep(1);
     modal.classList.add('open');
   }
 
@@ -39,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.querySelectorAll('[data-book-btn]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      openModal(btn.dataset.serviceKey, btn.dataset.serviceName);
+      openModal(btn.dataset.serviceKey, btn.dataset.serviceName, btn.dataset.serviceFee);
     });
   });
 
@@ -49,9 +112,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.target === modal) closeModal();
   });
 
+  // ---------------- Step 1: date/time slots ----------------
   dateInput.addEventListener('change', function () {
     timeInput.value = '';
-    formError.classList.remove('show');
+    formErrorStep1.classList.remove('show');
     var date = dateInput.value;
     if (!date) return;
 
@@ -91,46 +155,111 @@ document.addEventListener('DOMContentLoaded', function () {
       });
   });
 
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    formError.classList.remove('show');
-    formSuccess.classList.remove('show');
-
+  goToPaymentBtn.addEventListener('click', function () {
+    formErrorStep1.classList.remove('show');
     if (!dateInput.value) {
-      formError.textContent = 'Please choose a date.';
-      formError.classList.add('show');
+      formErrorStep1.textContent = 'Please choose a date.';
+      formErrorStep1.classList.add('show');
       return;
     }
     if (!timeInput.value) {
-      formError.textContent = 'Please choose an available time slot.';
-      formError.classList.add('show');
+      formErrorStep1.textContent = 'Please choose an available time slot.';
+      formErrorStep1.classList.add('show');
       return;
+    }
+    showStep(2);
+  });
+
+  backToDetailsBtn.addEventListener('click', function () {
+    showStep(1);
+  });
+
+  // ---------------- Step 2: payment ----------------
+  pmCash.addEventListener('change', togglePaymentPanels);
+  pmGcash.addEventListener('change', togglePaymentPanels);
+
+  screenshotInput.addEventListener('change', function () {
+    formErrorStep2.classList.remove('show');
+    var file = screenshotInput.files[0];
+    if (!file) {
+      uploadPreview.classList.remove('show');
+      return;
+    }
+
+    var allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowedTypes.indexOf(file.type) === -1) {
+      formErrorStep2.textContent = 'Screenshot must be a JPG, PNG, or WEBP image.';
+      formErrorStep2.classList.add('show');
+      screenshotInput.value = '';
+      uploadPreview.classList.remove('show');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      formErrorStep2.textContent = 'Screenshot is too large. Please upload an image under 5MB.';
+      formErrorStep2.classList.add('show');
+      screenshotInput.value = '';
+      uploadPreview.classList.remove('show');
+      return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      previewImg.src = e.target.result;
+      previewFilename.textContent = file.name;
+      uploadPreview.classList.add('show');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ---------------- Submit ----------------
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    formErrorStep2.classList.remove('show');
+    formSuccess.classList.remove('show');
+
+    if (pmGcash.checked) {
+      if (!referenceNumberInput.value.trim()) {
+        formErrorStep2.textContent = 'Please enter your GCash reference number.';
+        formErrorStep2.classList.add('show');
+        return;
+      }
+      if (!screenshotInput.files.length) {
+        formErrorStep2.textContent = 'Please upload a screenshot of your GCash payment.';
+        formErrorStep2.classList.add('show');
+        return;
+      }
     }
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitting…';
 
-    var body = new URLSearchParams({
-      service_key: serviceKeyInput.value,
-      appointment_date: dateInput.value,
-      appointment_time: timeInput.value,
-      notes: notesInput.value,
-    });
+    var formData = new FormData();
+    formData.append('service_key', serviceKeyInput.value);
+    formData.append('appointment_date', dateInput.value);
+    formData.append('appointment_time', timeInput.value);
+    formData.append('notes', notesInput.value);
+    formData.append('payment_method', pmGcash.checked ? 'gcash' : 'cash');
+    if (pmGcash.checked) {
+      formData.append('reference_number', referenceNumberInput.value.trim());
+      formData.append('screenshot', screenshotInput.files[0]);
+    }
 
     fetch('ajax/book-appointment.php', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body,
+      body: formData, // no Content-Type header — browser sets the multipart boundary
     })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok || res.data.error) {
-          formError.textContent = res.data.error || 'Something went wrong. Please try again.';
-          formError.classList.add('show');
+          formErrorStep2.textContent = res.data.error || 'Something went wrong. Please try again.';
+          formErrorStep2.classList.add('show');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Submit Request';
-          // Slot was likely taken — refresh the grid
-          if (dateInput.value) dateInput.dispatchEvent(new Event('change'));
+          // Slot may have been taken while filling out payment — send them back to re-check.
+          if (/slot/i.test(res.data.error || '')) {
+            showStep(1);
+            if (dateInput.value) dateInput.dispatchEvent(new Event('change'));
+          }
           return;
         }
         formSuccess.textContent = 'Request submitted! You can track it under View Requests.';
@@ -141,8 +270,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 1200);
       })
       .catch(function () {
-        formError.textContent = 'Network error. Please try again.';
-        formError.classList.add('show');
+        formErrorStep2.textContent = 'Network error. Please try again.';
+        formErrorStep2.classList.add('show');
         submitBtn.disabled = false;
         submitBtn.textContent = 'Submit Request';
       });
