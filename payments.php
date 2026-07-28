@@ -101,6 +101,12 @@ require_once 'includes/dashboard-header.php';
 .reject-modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
 .reject-error{ font-size:12px; color:#A2432F; margin-top:6px; display:none; }
 .reject-error.show{ display:block; }
+
+.verify-modal-box{ width:440px; }
+.vd-rows{ display:flex; flex-direction:column; gap:8px; }
+.vd-row{ display:flex; justify-content:space-between; font-size:13.5px; padding-bottom:8px; border-bottom:1px dashed var(--line); }
+.vd-row span:first-child{ color:var(--ink-soft); }
+.vd-row span:last-child{ font-weight:500; color:var(--navy); text-align:right; }
 </style>
 
 <div class="page-head">
@@ -149,7 +155,15 @@ require_once 'includes/dashboard-header.php';
             <td>
               <div class="row-actions">
                 <?php if ($r['payment_status'] === 'unpaid'): ?>
-                  <button type="button" class="verify-btn" data-verify-id="<?php echo $r['id']; ?>">Verify</button>
+                  <button type="button" class="verify-btn"
+                    data-verify-id="<?php echo $r['id']; ?>"
+                    data-parishioner="<?php echo htmlspecialchars($r['full_name']); ?>"
+                    data-service="<?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?>"
+                    data-amount="<?php echo number_format(payment_amount($r['service_key'], $feeMap)); ?>"
+                    data-method="<?php echo htmlspecialchars($r['payment_method'] ?? ''); ?>"
+                    data-reference="<?php echo htmlspecialchars($r['reference_number'] ?? ''); ?>"
+                    data-screenshot="<?php echo htmlspecialchars($r['payment_screenshot'] ?? ''); ?>"
+                    data-date="<?php echo date('F j, Y', strtotime($r['appointment_date'])); ?>">View &amp; Verify</button>
                   <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>">Reject</button>
                 <?php elseif ($r['payment_status'] === 'paid'): ?>
                   <a href="receipt.php?id=<?php echo $r['id']; ?>" target="_blank">Receipt</a>
@@ -163,6 +177,43 @@ require_once 'includes/dashboard-header.php';
       </tbody>
     </table>
   <?php endif; ?>
+</div>
+
+<!-- Verify details modal -->
+<div class="reject-modal-overlay" id="verifyModal">
+  <div class="reject-modal-box verify-modal-box">
+    <h3>Review before verifying</h3>
+    <p style="font-size:13px; color:var(--ink-soft); margin-bottom:16px;">Check the submitted proof against the amount and reference number before confirming.</p>
+
+    <div class="vd-rows">
+      <div class="vd-row"><span>Request</span><span id="vdRequest">—</span></div>
+      <div class="vd-row"><span>Parishioner</span><span id="vdParishioner">—</span></div>
+      <div class="vd-row"><span>Service</span><span id="vdService">—</span></div>
+      <div class="vd-row"><span>Appointment Date</span><span id="vdDate">—</span></div>
+      <div class="vd-row"><span>Amount Due</span><span id="vdAmount">—</span></div>
+      <div class="vd-row"><span>Payment Method</span><span id="vdMethod">—</span></div>
+      <div class="vd-row" id="vdReferenceRow"><span>Reference Number</span><span id="vdReference">—</span></div>
+    </div>
+
+    <div id="vdScreenshotWrap" style="display:none; margin-top:14px;">
+      <p style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px;">GCash Screenshot</p>
+      <a id="vdScreenshotLink" href="#" target="_blank" rel="noopener">
+        <img id="vdScreenshotImg" src="" alt="Submitted GCash payment screenshot" style="width:100%; max-height:260px; object-fit:contain; border-radius:12px; border:1px solid var(--line); background:var(--cream-deep);">
+      </a>
+      <p style="font-size:11px; color:var(--ink-soft); margin-top:6px;">Click the image to open full size in a new tab.</p>
+    </div>
+
+    <div id="vdNoScreenshot" style="display:none; margin-top:14px; padding:14px; background:var(--cream-deep); border-radius:12px; font-size:12.5px; color:var(--ink-soft);">
+      No screenshot was submitted — this is likely a cash payment collected at the office. Verify once cash is received.
+    </div>
+
+    <p class="reject-error" id="verifyError"></p>
+
+    <div class="reject-modal-actions">
+      <button type="button" class="btn btn-outline btn-sm" id="verifyCancel">Cancel</button>
+      <button type="button" class="btn btn-gold btn-sm" id="verifyConfirm">Confirm Verification</button>
+    </div>
+  </div>
 </div>
 
 <!-- Reject reason modal -->
