@@ -9,7 +9,11 @@ foreach (explode(' ', $_SESSION['full_name'] ?? '') as $part) {
     if ($part !== '') $initials .= strtoupper($part[0]);
 }
 $initials = substr($initials, 0, 2);
-$isParishioner = ($_SESSION['role'] ?? '') === 'parishioner';
+
+// Roles that get the left sidebar. Extend this list as each role's
+// section (Priest, Secretary) gets its own pages built out.
+$sidebarRoles = ['parishioner', 'treasurer'];
+$hasSidebar = in_array($_SESSION['role'] ?? '', $sidebarRoles, true);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -60,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="dash-topbar">
   <div class="dash-topbar-inner">
     <div class="dash-topbar-left">
-      <?php if ($isParishioner): ?>
+      <?php if ($hasSidebar): ?>
         <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Open menu" aria-expanded="false" aria-controls="dashSidebar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         </button>
@@ -119,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </div>
 
 <div class="dash-shell">
-  <?php if ($isParishioner): ?>
+  <?php if ($hasSidebar): ?>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <?php require_once __DIR__ . '/sidebar.php'; ?>
   <?php endif; ?>
