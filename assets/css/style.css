@@ -382,3 +382,13 @@ footer a:hover{ color: var(--gold-bright); }
   .nav-toggle{ display:flex; align-items:center; justify-content:center; }
   .nav-actions .btn-outline{ display:none; }
 }
+.brand-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.hero-frame {
+  overflow: hidden; /* so the img respects the frame's border-radius */
+}
