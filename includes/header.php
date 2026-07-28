@@ -22,14 +22,10 @@ require_once __DIR__ . '/config.php';
 <nav class="navbar" id="navbar">
   <div class="nav-inner">
     <a href="#home" class="brand">
-      <svg class="brand-mark" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <circle cx="24" cy="24" r="23" fill="#16223F"/>
-        <circle cx="24" cy="24" r="23" stroke="#C6A15B" stroke-width="1"/>
-        <path d="M24 10V38M14 18H34M24 10C20 14 20 18 24 21C28 18 28 14 24 10Z" stroke="#E7C883" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+      <img src="assets/images/logo.jpeg" alt="<?php echo htmlspecialchars($parish['name']); ?> logo" class="brand-mark">
       <span class="brand-text">
         <strong><?php echo htmlspecialchars($parish['name']); ?></strong>
-        <span><?php echo htmlspecialchars($parish['diocese']); ?></span>
+        <span><?php echo htmlspecialchars($parish['des']); ?></span>
       </span>
     </a>
 
