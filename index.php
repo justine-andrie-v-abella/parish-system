@@ -1,19 +1,7 @@
 <?php require_once 'includes/header.php'; ?>
 <!-- index.php -->
 <!-- ===================== Hero ===================== -->
-<header class="hero" id="home">
-  <svg class="rose-window" viewBox="0 0 640 640" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <circle cx="320" cy="320" r="300" stroke="#E7C883" stroke-width="1"/>
-    <circle cx="320" cy="320" r="230" stroke="#E7C883" stroke-width="1"/>
-    <circle cx="320" cy="320" r="150" stroke="#E7C883" stroke-width="1"/>
-    <circle cx="320" cy="320" r="60" stroke="#E7C883" stroke-width="1.4"/>
-    <?php for ($i = 0; $i < 16; $i++):
-        $angle = $i * 22.5;
-    ?>
-      <line x1="320" y1="320" x2="<?php echo 320 + 300 * cos(deg2rad($angle)); ?>" y2="<?php echo 320 + 300 * sin(deg2rad($angle)); ?>" stroke="#E7C883" stroke-width="0.75"/>
-    <?php endfor; ?>
-  </svg>
-
+<header class="hero" id="home" style="background-image: linear-gradient(180deg, rgba(15,26,48,0.88) 0%, rgba(15,26,48,0.72) 45%, rgba(15,26,48,0.92) 100%), url('assets/images/landing-page-background.jpeg'); background-size: cover; background-position: center;">
   <div class="container hero-inner">
     <div class="reveal visible">
       <span class="eyebrow hero-eyebrow">Diocese of Tagbilaran · Est. 1596</span>
@@ -31,29 +19,7 @@
     </div>
 
     <div class="hero-frame reveal visible">
-      <svg viewBox="0 0 400 520" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <rect width="400" height="520" fill="#14203c"/>
-        <rect x="0" y="360" width="400" height="160" fill="#0f1a30"/>
-        <!-- nave arches -->
-        <path d="M40 360V240C40 190 80 160 120 160C160 160 200 190 200 240V360" stroke="#E7C883" stroke-width="1.4" opacity="0.55"/>
-        <path d="M200 360V240C200 190 240 160 280 160C320 160 360 190 360 240V360" stroke="#E7C883" stroke-width="1.4" opacity="0.55"/>
-        <!-- central great window -->
-        <path d="M120 360V180C120 130 155 95 200 95C245 95 280 130 280 180V360" fill="#1b2a4a" stroke="#E7C883" stroke-width="1.6"/>
-        <path d="M140 360V190C140 148 165 118 200 118C235 118 260 148 260 190V360" stroke="#C6A15B" stroke-width="1" opacity="0.7"/>
-        <circle cx="200" cy="150" r="26" stroke="#E7C883" stroke-width="1.2" opacity="0.8"/>
-        <line x1="200" y1="360" x2="200" y2="124" stroke="#C6A15B" stroke-width="0.8" opacity="0.6"/>
-        <line x1="150" y1="360" x2="150" y2="220" stroke="#C6A15B" stroke-width="0.8" opacity="0.4"/>
-        <line x1="250" y1="360" x2="250" y2="220" stroke="#C6A15B" stroke-width="0.8" opacity="0.4"/>
-        <!-- aisle candles -->
-        <g opacity="0.85">
-          <rect x="70" y="330" width="6" height="30" fill="#8A6A4B"/>
-          <circle cx="73" cy="324" r="4" fill="#E7C883"/>
-          <rect x="324" y="330" width="6" height="30" fill="#8A6A4B"/>
-          <circle cx="327" cy="324" r="4" fill="#E7C883"/>
-        </g>
-        <!-- floor light -->
-        <ellipse cx="200" cy="420" rx="150" ry="26" fill="#E7C883" opacity="0.08"/>
-      </svg>
+      <img src="assets/images/landing-page-background.jpeg" alt="Parish church" style="width:100%; height:100%; object-fit:cover; border-radius: inherit;">
     </div>
   </div>
 </header>
