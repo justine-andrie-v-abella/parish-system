@@ -253,30 +253,6 @@ require_once 'includes/dashboard-header.php';
   <div class="summary-card accent-unpaid"><span class="num"><?php echo $unpaidAppointments; ?></span><span class="lbl">Unpaid</span></div>
 </div>
 
-<!-- Recent activity -->
-<div class="panel" style="margin-bottom:40px;">
-  <h3>Recent Activity</h3>
-  <?php if (empty($activity)): ?>
-    <p class="upcoming-empty">No activity yet — your first request will show up here.</p>
-  <?php else: ?>
-    <div class="activity-list">
-      <?php foreach ($activity as $a):
-          $svcName = $serviceNames[$a['service_key']] ?? ucfirst($a['service_key']);
-          $verb = $activityText[$a['status']] ?? 'updated';
-      ?>
-        <div class="activity-item">
-          <div class="activity-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
-          </div>
-          <div>
-            <p>Your <strong><?php echo htmlspecialchars($svcName); ?></strong> request <?php echo $verb; ?>.</p>
-            <span class="time"><?php echo date('F j, Y', strtotime($a['updated_at'])); ?></span>
-          </div>
-        </div>
-      <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
-</div>
 
 <!-- Quick actions -->
 <div class="dash-section-label"><h2>Quick Actions</h2></div>
