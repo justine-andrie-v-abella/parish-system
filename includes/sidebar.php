@@ -7,17 +7,28 @@
  * assets/css/dashboard-sidebar.css and assets/js/sidebar-toggle.js).
  */
 $current = basename($_SERVER['PHP_SELF']);
+$role = $_SESSION['role'] ?? '';
 
-$sidebarLinks = [
-    ['href' => 'dashboard-parishioner.php', 'label' => 'Dashboard', 'match' => ['dashboard-parishioner.php'],
-        'icon' => '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'],
-    ['href' => 'intentions.php', 'label' => 'My Intentions', 'match' => ['intentions.php'],
-        'icon' => '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'],
-    ['href' => 'requests.php', 'label' => 'View Requests', 'match' => ['requests.php'],
-        'icon' => '<path d="M3 6h18M3 12h18M3 18h18"/>'],
-    ['href' => 'coming-soon.php?feature=Chat+with+Secretary', 'label' => 'Chat with Secretary', 'match' => [],
-        'icon' => '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>'],
+$sidebarLinksByRole = [
+    'parishioner' => [
+        ['href' => 'dashboard-parishioner.php', 'label' => 'Dashboard', 'match' => ['dashboard-parishioner.php'],
+            'icon' => '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'],
+        ['href' => 'intentions.php', 'label' => 'My Intentions', 'match' => ['intentions.php'],
+            'icon' => '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'],
+        ['href' => 'requests.php', 'label' => 'View Requests', 'match' => ['requests.php'],
+            'icon' => '<path d="M3 6h18M3 12h18M3 18h18"/>'],
+        ['href' => 'coming-soon.php?feature=Chat+with+Secretary', 'label' => 'Chat with Secretary', 'match' => [],
+            'icon' => '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>'],
+    ],
+    'treasurer' => [
+        ['href' => 'dashboard-treasurer.php', 'label' => 'Dashboard', 'match' => ['dashboard-treasurer.php'],
+            'icon' => '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'],
+        ['href' => 'payments.php', 'label' => 'Payment Verification', 'match' => ['payments.php'],
+            'icon' => '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'],
+    ],
 ];
+
+$sidebarLinks = $sidebarLinksByRole[$role] ?? [];
 ?>
 <aside class="dash-sidebar" id="dashSidebar">
   <div class="sidebar-mobile-head">
