@@ -13,19 +13,11 @@ clear_old();
 ?>
 
 <div class="auth-page">
-  <div class="auth-visual">
-    <svg class="auth-rose" viewBox="0 0 480 480" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <circle cx="240" cy="240" r="220" stroke="#E7C883" stroke-width="1"/>
-      <circle cx="240" cy="240" r="160" stroke="#E7C883" stroke-width="1"/>
-      <circle cx="240" cy="240" r="90" stroke="#E7C883" stroke-width="1"/>
-      <?php for ($i = 0; $i < 12; $i++): $a = $i * 30; ?>
-        <line x1="240" y1="240" x2="<?php echo 240 + 220 * cos(deg2rad($a)); ?>" y2="<?php echo 240 + 220 * sin(deg2rad($a)); ?>" stroke="#E7C883" stroke-width="0.75"/>
-      <?php endfor; ?>
-    </svg>
+  <div class="auth-visual" style="background-image: linear-gradient(180deg, rgba(11,20,36,0.88) 0%, rgba(11,20,36,0.72) 45%, rgba(11,20,36,0.92) 100%), url('assets/images/login.jpeg'); background-size: cover; background-position: center;">
 
     <div class="auth-visual-top">
-      <svg width="34" height="34" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="23" fill="#0B1424"/><circle cx="24" cy="24" r="23" stroke="#C6A15B" stroke-width="1"/><path d="M24 10V38M14 18H34M24 10C20 14 20 18 24 21C28 18 28 14 24 10Z" stroke="#E7C883" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span><strong style="font-family:var(--font-display); font-size:18px; color:#fff;"><?php echo htmlspecialchars($parish['name']); ?></strong><span><?php echo htmlspecialchars($parish['diocese']); ?></span></span>
+      <img src="assets/images/logo.jpeg" alt="<?php echo htmlspecialchars($parish['name']); ?> logo" width="34" height="34" style="border-radius:50%; object-fit:cover;">
+      <span><strong style="font-family:var(--font-display); font-size:18px; color:#fff;"><?php echo htmlspecialchars($parish['name']); ?></strong><span><?php echo htmlspecialchars($parish['des']); ?></span></span>
     </div>
 
     <div class="auth-visual-mid">
