@@ -2,6 +2,7 @@
 require_once '../includes/config.php';
 require_role(['secretary']);
 require_once '../includes/db.php';
+require_once '../includes/logs.php';
 
 header('Content-Type: application/json');
 
@@ -64,6 +65,10 @@ try {
     $notify->execute([$appt['user_id'], $message, 'announcement']);
 
     $pdo->commit();
+
+    log_activity($pdo, $secretaryId, 'appointment_rejected',
+        $_SESSION['full_name'] . " rejected {$svcLabel} request #{$id}: {$reason}",
+        'appointment', $id);
 
     echo json_encode(['success' => true]);
 } catch (Exception $e) {

@@ -2,6 +2,7 @@
 require_once '../includes/config.php';
 require_role(['secretary']);
 require_once '../includes/db.php';
+require_once '../includes/logs.php';
 
 header('Content-Type: application/json');
 
@@ -50,6 +51,10 @@ try {
 
     $touch = $pdo->prepare('UPDATE appointments SET handled_by = ?, handled_at = NOW() WHERE id = ?');
     $touch->execute([$secretaryId, $id]);
+
+    log_activity($pdo, $secretaryId, 'documents_requested',
+        $_SESSION['full_name'] . " requested documents for {$svcLabel} request #{$id}: {$message}",
+        'appointment', $id);
 
     echo json_encode(['success' => true]);
 } catch (Exception $e) {
