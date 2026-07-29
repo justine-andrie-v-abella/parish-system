@@ -32,6 +32,10 @@ $sidebarLinksByRole = [
         ['href' => 'queue.php', 'label' => 'Appointment Queue', 'match' => ['queue.php'],
             'icon' => '<path d="M3 6h18M3 12h18M3 18h18"/>'],
     ],
+    'priest' => [
+        ['href' => 'dashboard-priest.php', 'label' => 'Dashboard', 'match' => ['dashboard-priest.php'],
+            'icon' => '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'],
+    ],
 ];
 
 $sidebarLinks = $sidebarLinksByRole[$role] ?? [];

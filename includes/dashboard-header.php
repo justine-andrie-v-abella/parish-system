@@ -12,7 +12,7 @@ $initials = substr($initials, 0, 2);
 
 // Roles that get the left sidebar. Extend this list as each role's
 // section (Priest, Secretary) gets its own pages built out.
-$sidebarRoles = ['parishioner', 'treasurer', 'secretary'];
+$sidebarRoles = ['parishioner', 'treasurer', 'secretary', 'priest'];
 $hasSidebar = in_array($_SESSION['role'] ?? '', $sidebarRoles, true);
 ?>
 <!DOCTYPE html>
