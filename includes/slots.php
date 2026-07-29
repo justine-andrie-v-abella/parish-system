@@ -36,20 +36,29 @@ function get_possible_slots(string $dateStr): array
  * Returns [ 'available' => [...], 'taken' => [...] ] for a given date.
  * "Taken" = any appointment on that date whose status isn't
  * cancelled/rejected (pending counts as taken too, first-come-first-served).
+ *
+ * $excludeAppointmentId: when rescheduling an existing appointment, pass
+ * its own id so its current slot doesn't count as "taken" against itself.
+ * Optional and defaults to null, so existing callers are unaffected.
  */
-function get_slot_availability(PDO $pdo, string $dateStr): array
+function get_slot_availability(PDO $pdo, string $dateStr, ?int $excludeAppointmentId = null): array
 {
     $possible = get_possible_slots($dateStr);
     if (empty($possible)) {
         return ['available' => [], 'taken' => []];
     }
 
-    $stmt = $pdo->prepare(
-        "SELECT appointment_time FROM appointments
-         WHERE appointment_date = ? AND status NOT IN ('cancelled','rejected')
-         AND appointment_time IS NOT NULL"
-    );
-    $stmt->execute([$dateStr]);
+    $sql = "SELECT appointment_time FROM appointments
+            WHERE appointment_date = ? AND status NOT IN ('cancelled','rejected')
+            AND appointment_time IS NOT NULL";
+    $params = [$dateStr];
+    if ($excludeAppointmentId !== null) {
+        $sql .= ' AND id != ?';
+        $params[] = $excludeAppointmentId;
+    }
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $taken = array_map(fn($r) => $r['appointment_time'], $stmt->fetchAll());
 
     $available = array_values(array_diff($possible, $taken));
