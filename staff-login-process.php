@@ -4,6 +4,7 @@
  */
 require_once 'includes/session.php';
 require_once 'includes/db.php';
+require_once 'includes/logs.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: staff-login.php');
@@ -35,6 +36,8 @@ session_regenerate_id(true);
 $_SESSION['user_id']   = $user['id'];
 $_SESSION['role']      = $user['role'];
 $_SESSION['full_name'] = $user['full_name'];
+
+log_activity($pdo, $user['id'], 'login', $user['full_name'] . ' (' . ucfirst($user['role']) . ') logged in.');
 
 if ($remember) {
     $params = session_get_cookie_params();

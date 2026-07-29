@@ -6,6 +6,7 @@
  */
 require_once 'includes/session.php';
 require_once 'includes/db.php';
+require_once 'includes/logs.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: staff-register.php');
@@ -76,6 +77,8 @@ session_regenerate_id(true);
 $_SESSION['user_id']   = $userId;
 $_SESSION['role']      = $role;
 $_SESSION['full_name'] = $fullname;
+
+log_activity($pdo, $userId, 'register', $fullname . ' was provisioned as ' . ucfirst($role) . '.');
 
 header('Location: ' . dashboard_for($role));
 exit;

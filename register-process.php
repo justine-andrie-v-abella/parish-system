@@ -6,6 +6,7 @@
  */
 require_once 'includes/session.php';
 require_once 'includes/db.php';
+require_once 'includes/logs.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: register.php');
@@ -58,6 +59,8 @@ session_regenerate_id(true);
 $_SESSION['user_id']   = $pdo->lastInsertId();
 $_SESSION['role']      = 'parishioner';
 $_SESSION['full_name'] = $fullname;
+
+log_activity($pdo, (int) $_SESSION['user_id'], 'register', $fullname . ' registered as a new parishioner.');
 
 header('Location: ' . dashboard_for('parishioner'));
 exit;
