@@ -3,6 +3,7 @@ require_once '../includes/config.php';
 require_role(['secretary']);
 require_once '../includes/db.php';
 require_once '../includes/slots.php';
+require_once '../includes/logs.php';
 
 header('Content-Type: application/json');
 
@@ -79,6 +80,10 @@ try {
     $notify->execute([$appt['user_id'], $message, 'schedule']);
 
     $pdo->commit();
+
+    log_activity($pdo, $secretaryId, 'appointment_rescheduled',
+        $_SESSION['full_name'] . " rescheduled {$svcLabel} request #{$id} to " . date('M j, Y', strtotime($date)) . '.',
+        'appointment', $id);
 
     echo json_encode(['success' => true]);
 } catch (Exception $e) {

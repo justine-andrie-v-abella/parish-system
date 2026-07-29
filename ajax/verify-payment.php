@@ -3,6 +3,7 @@ require_once '../includes/config.php';
 require_role(['treasurer']);
 require_once '../includes/db.php';
 require_once '../includes/payments.php';
+require_once '../includes/logs.php';
 
 header('Content-Type: application/json');
 
@@ -58,6 +59,10 @@ try {
     $notify->execute([$appt['user_id'], $message, 'payment']);
 
     $pdo->commit();
+
+    log_activity($pdo, $treasurerId, 'payment_verified',
+        $_SESSION['full_name'] . " verified payment for {$svcLabel} request #{$id} (Receipt #{$receiptNumber}).",
+        'appointment', $id);
 
     echo json_encode(['success' => true, 'receipt_number' => $receiptNumber]);
 } catch (Exception $e) {

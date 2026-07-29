@@ -1,4 +1,5 @@
 <?php
+//ajax\get-slots.php
 require_once '../includes/config.php';
 require_role(['parishioner']);
 require_once '../includes/db.php';

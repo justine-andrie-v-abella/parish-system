@@ -1,4 +1,5 @@
 <?php
+//ajax\cancel-appointment.php
 require_once '../includes/config.php';
 require_role(['parishioner']);
 require_once '../includes/db.php';
