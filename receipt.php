@@ -80,7 +80,7 @@ $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key'])
 <div class="receipt">
   <div class="r-head">
     <h1><?php echo htmlspecialchars($parish['name']); ?></h1>
-    <p><?php echo htmlspecialchars($parish['diocese'] ?? ''); ?></p>
+    <p><?php echo htmlspecialchars($parish['des'] ?? ''); ?></p>
   </div>
 
   <div class="r-title">

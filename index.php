@@ -4,8 +4,8 @@
 <header class="hero" id="home" style="background-image: linear-gradient(180deg, rgba(15,26,48,0.88) 0%, rgba(15,26,48,0.72) 45%, rgba(15,26,48,0.92) 100%), url('assets/images/landing-page-background.jpeg'); background-size: cover; background-position: center;">
   <div class="container hero-inner">
     <div class="reveal visible">
-      <span class="eyebrow hero-eyebrow">Diocese of Tagbilaran · Est. 1596</span>
-      <h1>Welcome home to <em>San Vicente Ferrer</em> Parish</h1>
+      <span class="eyebrow hero-eyebrow"><?php echo htmlspecialchars($parish['des']); ?></span>
+      <h1>Welcome home to <em>Our Lady of Mt. Carmel</em> Parish</h1>
       <p class="lede">Book baptisms, weddings, and Masses without the waiting line. Our appointment system carries the same warmth as walking through our doors — now from wherever you are.</p>
       <div class="hero-ctas">
         <a href="#services" class="btn btn-gold">Book an Appointment</a>
