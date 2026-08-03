@@ -9,9 +9,10 @@
 
 require_once __DIR__ . '/session.php';
 
+
 $parish = [
-    'name'        => 'Our Lady of Mt. Carmel Parish',
-    'des'     => 'Parish Management System',
+    'name'        => 'San Vicente Ferrer Parish',
+    'diocese'     => 'Diocese of Tagbilaran',
     'address'     => 'Poblacion Street, Tagbilaran City, Bohol',
     'phone'       => '(038) 411 2277',
     'email'       => 'office@svfparish.ph',
@@ -62,3 +63,60 @@ $staff_roles = [
     'secretary' => ['label' => 'Secretary', 'sub' => 'Scheduling & records'],
     'treasurer' => ['label' => 'Treasurer', 'sub' => 'Payments & fees'],
 ];
+
+/**
+ * Icon keys the front end knows how to render (see the inline $icons
+ * arrays in index.php / intentions.php). The Catalog admin page only
+ * lets the Priest choose from this set so a new service never ends up
+ * with a broken/missing icon.
+ */
+$catalog_icon_keys = ['dove', 'flame', 'rings', 'cross', 'candle', 'vessel'];
+
+/**
+ * Live catalog override: if database/migration_add_catalog.sql has been
+ * run, $services and $requirements above get replaced with the current
+ * database contents, so edits made on catalog.php show up everywhere
+ * (landing page, booking, receipts) without a code change. If the
+ * catalog tables don't exist yet, or the DB is unreachable, this fails
+ * silently and the hardcoded arrays above keep working exactly as
+ * before — nothing breaks mid-upgrade.
+ */
+try {
+    require_once __DIR__ . '/db-credentials.php';
+    $catalogPdo = new PDO(
+        "mysql:host={$DB_HOST};dbname={$DB_NAME};charset=utf8mb4",
+        $DB_USER, $DB_PASS,
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
+    );
+
+    if ($catalogPdo->query("SHOW TABLES LIKE 'services'")->rowCount() > 0) {
+        $dbServices = $catalogPdo->query(
+            "SELECT service_key, icon, name, description, fee FROM services WHERE is_active = 1 ORDER BY sort_order ASC, id ASC"
+        )->fetchAll();
+
+        if ($dbServices) {
+            $services = array_map(function ($s) {
+                return ['key' => $s['service_key'], 'icon' => $s['icon'], 'name' => $s['name'], 'desc' => $s['description'], 'fee' => (int) $s['fee']];
+            }, $dbServices);
+
+            $requirements = [];
+            $reqRows = $catalogPdo->query(
+                "SELECT service_key, requirement_text FROM service_requirements ORDER BY service_key, sort_order ASC, id ASC"
+            )->fetchAll();
+            foreach ($reqRows as $r) {
+                $requirements[$r['service_key']][] = $r['requirement_text'];
+            }
+            // Any service with zero requirement rows still needs an empty array
+            // so existing pages that loop $requirements[$key] don't warn.
+            foreach ($services as $s) {
+                if (!isset($requirements[$s['key']])) {
+                    $requirements[$s['key']] = [];
+                }
+            }
+        }
+    }
+    unset($catalogPdo);
+} catch (Exception $e) {
+    // DB unreachable or migration not applied yet — keep the hardcoded
+    // fallback arrays defined above. Nothing to do here.
+}
