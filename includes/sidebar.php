@@ -1,13 +1,12 @@
 <?php
-/**
- * includes/sidebar.php
- * Left-hand nav for the dashboard shell. Included by dashboard-header.php.
- * Highlights the active item based on the current script filename.
- * On small screens this renders as an off-canvas drawer (see
- * assets/css/dashboard-sidebar.css and assets/js/sidebar-toggle.js).
- */
 $current = basename($_SERVER['PHP_SELF']);
 $role = $_SESSION['role'] ?? '';
+$fullName = $_SESSION['full_name'] ?? '';
+$initials = '';
+if ($fullName) {
+    $parts = explode(' ', trim($fullName));
+    $initials = strtoupper(substr($parts[0], 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
+}
 
 $sidebarLinksByRole = [
     'parishioner' => [
@@ -49,6 +48,15 @@ $sidebarLinks = $sidebarLinksByRole[$role] ?? [];
     <span>Menu</span>
     <button type="button" class="sidebar-close" id="sidebarClose" aria-label="Close menu">&times;</button>
   </div>
+
+  <div class="sidebar-user">
+    <div class="dash-avatar"><?php echo htmlspecialchars($initials); ?></div>
+    <div class="sidebar-user-info">
+      <span class="dash-username"><?php echo htmlspecialchars($fullName); ?></span>
+      <span class="dash-role-badge <?php echo htmlspecialchars($role); ?>"><?php echo htmlspecialchars(ucfirst($role)); ?></span>
+    </div>
+  </div>
+
   <nav class="sidebar-nav">
     <?php foreach ($sidebarLinks as $link):
         $isActive = in_array($current, $link['match'], true);
@@ -61,4 +69,8 @@ $sidebarLinks = $sidebarLinksByRole[$role] ?? [];
       </a>
     <?php endforeach; ?>
   </nav>
+
+  <div class="sidebar-footer">
+    <a href="logout.php" class="btn btn-outline btn-sm sidebar-logout">Log out</a>
+  </div>
 </aside>

@@ -215,9 +215,8 @@ require_once 'includes/dashboard-header.php';
 <div class="dash-hero">
   <div class="dash-hero-grid">
     <div>
-      <span class="eyebrow" style="color:var(--gold-bright);">Parishioner Portal</span>
       <h1>Welcome, <?php echo htmlspecialchars(explode(' ', $_SESSION['full_name'])[0]); ?>.</h1>
-      <p>Here's where your requests stand, what's coming up on the parish calendar, and what needs your attention. Check the calendar and bell icons above for the full schedule and notifications.</p>
+      <p>Here's where your requests stand, what's coming up on the parish calendar, and what needs your attention.</p>
     </div>
 
     <div class="hero-upcoming">

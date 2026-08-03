@@ -12,7 +12,7 @@ require_once __DIR__ . '/session.php';
 
 $parish = [
     'name'        => 'San Vicente Ferrer Parish',
-    'diocese'     => 'Diocese of Tagbilaran',
+    'des'         => 'Parish Management System',
     'address'     => 'Poblacion Street, Tagbilaran City, Bohol',
     'phone'       => '(038) 411 2277',
     'email'       => 'office@svfparish.ph',

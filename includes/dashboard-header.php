@@ -113,11 +113,6 @@ document.addEventListener('DOMContentLoaded', function () {
           <?php endif; ?>
         </div>
       <?php endif; ?>
-
-      <span class="dash-role-badge <?php echo htmlspecialchars($_SESSION['role']); ?>"><?php echo htmlspecialchars(ucfirst($_SESSION['role'])); ?></span>
-      <span class="dash-username"><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
-      <div class="dash-avatar"><?php echo htmlspecialchars($initials ?: '·'); ?></div>
-      <a href="logout.php" class="btn btn-outline btn-sm">Log out</a>
     </div>
   </div>
 </div>
