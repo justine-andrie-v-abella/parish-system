@@ -1,6 +1,6 @@
 <?php
 require_once 'includes/config.php';
-require_role(['secretary']);
+require_role(['secretary', 'priest']);
 require_once 'includes/db.php';
 require_once 'includes/calendar.php';
 
@@ -117,7 +117,7 @@ require_once 'includes/dashboard-header.php';
 </style>
 
 <div class="page-head">
-  <span class="eyebrow">Secretary</span>
+  <span class="eyebrow"><?php echo ucfirst($_SESSION['role']); ?></span>
   <h1>Appointment Queue</h1>
   <p>Review incoming requests, approve or reject them, ask for documents, or reschedule.</p>
 </div>
