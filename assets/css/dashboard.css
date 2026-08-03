@@ -13,30 +13,29 @@
 }
 .dash-topbar-inner{
   max-width: 1180px; margin:0 auto; padding: 14px 28px;
-  display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
-}
-.dash-brand{ display:flex; align-items:center; gap:12px; }
-.dash-brand strong{ font-family: var(--font-display); font-size:18px; color:var(--navy); }
-.dash-brand span{ display:block; font-family: var(--font-mono); font-size:9px; letter-spacing:2px; color: var(--gold-dim); text-transform:uppercase; }
-
-.dash-user{ display:flex; align-items:center; gap:12px; }
-.dash-role-badge{
-  font-family: var(--font-mono); font-size:10px; letter-spacing:1.5px; text-transform:uppercase;
-  padding: 5px 12px; border-radius:999px; font-weight:600;
-}
-.dash-role-badge.parishioner{ background:#EAF3EC; color:#2F6B45; }
-.dash-role-badge.priest{ background:#F3EAE0; color:#8A5A2B; }
-.dash-role-badge.secretary{ background:#E6ECFA; color:#33488A; }
-.dash-role-badge.treasurer{ background:#FBEAE6; color:#A2432F; }
-
-.dash-username{ font-size:14px; color: var(--navy); font-weight:500; }
-.dash-avatar{
-  width:36px; height:36px; border-radius: 18px 18px 4px 4px;
-  background: linear-gradient(155deg, var(--gold-bright), var(--brown-soft));
-  display:flex; align-items:center; justify-content:center;
-  color:#fff; font-family: var(--font-display); font-weight:600; font-size:14px;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  flex-wrap: nowrap;          /* was: wrap — this was causing the second line */
 }
 
+.dash-brand{
+  display:flex; align-items:center; gap:12px;
+  min-width: 0;                /* lets it shrink instead of forcing overflow */
+  flex-shrink: 1;
+}
+.dash-brand strong{
+  font-family: var(--font-display); font-size:18px; color:var(--navy);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash-brand span{
+  display:block; font-family: var(--font-mono); font-size:9px; letter-spacing:2px;
+  color: var(--gold-dim); text-transform:uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.dash-user{
+  display:flex; align-items:center;
+  flex-shrink: 0;
+}
 .dash-main{ max-width: 1180px; margin: 0 auto; padding: 44px 28px 80px; }
 
 .dash-hero{
@@ -112,13 +111,14 @@
 .cal-legend span{ display:inline-flex; align-items:center; gap:5px; }
 .cal-legend i{ width:9px; height:9px; border-radius:50%; display:inline-block; }
 
-.cal-grid{ display:grid; grid-template-columns: repeat(7,1fr); gap:6px; }
+.cal-grid{ display:grid; grid-template-columns: repeat(7,1fr); gap:6px; min-width:0; }
 .cal-dow{ text-align:center; font-family: var(--font-mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; color: var(--ink-soft); padding-bottom:6px; }
 .cal-cell{
   aspect-ratio: 1; border-radius:10px; border:1px solid var(--line); background: var(--cream);
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
   font-size:12.5px; color: var(--ink-soft); position:relative;
 }
+.cal-cell{ min-width:0; }
 .cal-cell.empty{ border:none; background:transparent; }
 .cal-cell.today{ border-color: var(--navy); box-shadow: 0 0 0 1px var(--navy) inset; font-weight:600; }
 .cal-cell .dot{ width:7px; height:7px; border-radius:50%; }
@@ -221,8 +221,12 @@
 .tab-panel.active{ display:block; }
 
 /* ---------------- Header dropdowns (calendar / notifications) ---------------- */
-.header-tools{ display:flex; align-items:center; gap:8px; }
-.dropdown-wrap{ position:relative; }
+.header-tools{
+  position: relative;      /* single stable anchor for BOTH panels */
+  display:flex; align-items:center; gap:8px;
+  flex-wrap: nowrap; flex-shrink: 0;
+}
+.dropdown-wrap{ position: static; }
 
 .icon-btn{
   width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background: var(--white);
@@ -246,11 +250,30 @@
   box-shadow: var(--shadow-lift); padding:20px; opacity:0; transform: translateY(-8px) scale(0.98);
   pointer-events:none; transition: all .2s var(--ease);
   max-height: 76vh; overflow-y:auto;
+  width: min(360px, calc(100vw - 32px));   /* shrinks with the viewport, anchor never moves */
 }
+.dropdown-panel.dp-notif{ width: min(320px, calc(100vw - 32px)); }
 .dropdown-panel.open{ opacity:1; transform:none; pointer-events:auto; }
-.dropdown-panel.dp-calendar{ width: 360px; }
-.dropdown-panel.dp-notif{ width: 320px; }
-@media (max-width:480px){
-  .dropdown-panel{ position:fixed; top:70px; left:16px; right:16px; width:auto !important; }
+
+/* raise the breakpoint so narrow desktop windows get the same treatment as phones,
+   and pin to the viewport instead of the trigger button */
+@media (max-width: 700px){
+  .dropdown-panel{
+    position: fixed;
+    top: 70px; left: 16px; right: 16px;
+    width: auto !important;
+    max-width: none;
+  }
 }
-.dropdown-panel h4{ font-size:15px; margin-bottom:14px; font-family:var(--font-display); color:var(--navy); }
+
+/* ---------------- Whole-page zoom scaling ---------------- */
+/* Instead of letting content reflow/wrap at small widths, shrink
+   the entire dashboard proportionally, like a browser zoom-out.
+   Header, dropdowns, cards, text — everything scales together,
+   so relative positions never change. */
+@media (max-width: 1180px){ body{ zoom: 0.92; } }
+@media (max-width: 1000px){ body{ zoom: 0.82; } }
+@media (max-width: 860px) { body{ zoom: 0.72; } }
+@media (max-width: 700px) { body{ zoom: 0.62; } }
+@media (max-width: 560px) { body{ zoom: 0.52; } }
+@media (max-width: 420px) { body{ zoom: 0.45; } }

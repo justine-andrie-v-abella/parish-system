@@ -1,3 +1,5 @@
+
+//assets\js\sidebar-toggle.js
 document.addEventListener('DOMContentLoaded', function () {
   var toggle  = document.getElementById('sidebarToggle');
   var sidebar = document.getElementById('dashSidebar');

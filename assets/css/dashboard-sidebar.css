@@ -5,6 +5,7 @@
    Loaded AFTER dashboard.css, so the rules below intentionally override
    dashboard.css's fixed 1180px container to make the dashboard edge-to-edge
    and fluid, instead of centered with dead space on wide screens.
+   assets\css\dashboard-sidebar.css
    ========================================================================== */
 
 /* ---------------- Full-bleed container (overrides dashboard.css) ---------------- */
@@ -253,4 +254,25 @@
   .slot-grid{ grid-template-columns: repeat(3,1fr); }
 
   .requests-table th, .requests-table td{ padding: 10px 12px; font-size:12.5px; }
+}
+
+.sidebar-user{
+  display:flex; align-items:center; gap:12px;
+  padding: 0 4px 20px; margin-bottom: 16px; border-bottom: 1px solid var(--line);
+}
+.sidebar-user-info{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+.sidebar-user-info .dash-username{
+  font-size:14px; font-weight:600; color:var(--navy);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.sidebar-user-info .dash-role-badge{ align-self:flex-start; }
+
+.sidebar-footer{ margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+.sidebar-logout{ width:100%; text-align:center; }
+
+/* Desktop sidebar is sticky/tall enough to just push the footer down naturally.
+   On the mobile drawer, pin it to the bottom of the panel. */
+@media (max-width: 860px){
+  .dash-sidebar{ display:flex; flex-direction:column; }
+  .sidebar-nav{ flex:1; }
 }

@@ -8,6 +8,7 @@
 //   <div class="tab-panel active" id="tab-first-tab">...</div>
 //   <div class="tab-panel" id="tab-second-tab">...</div>
 // </div>
+//assets\js\dashboard.js
 document.querySelectorAll('.tab-switch').forEach(switcher => {
   const wrap = switcher.closest('.tab-panel-wrap') || switcher.parentElement;
   const buttons = switcher.querySelectorAll('.tab-btn');
@@ -30,7 +31,6 @@ document.querySelectorAll('.tab-switch').forEach(switcher => {
 (function () {
   const toggles = document.querySelectorAll('[data-dropdown-toggle]');
   const calPanel = document.querySelector('.dropdown-panel[data-dropdown="cal"]');
-  // snapshot the current-month markup exactly as PHP rendered it on page load
   const calDefaultHtml = calPanel ? calPanel.innerHTML : null;
 
   function resetCalendarIfNeeded(panel) {
@@ -41,10 +41,7 @@ document.querySelectorAll('.tab-switch').forEach(switcher => {
 
   function closeAll(except) {
     document.querySelectorAll('.dropdown-panel.open').forEach(function (p) {
-      if (p !== except) {
-        p.classList.remove('open');
-        resetCalendarIfNeeded(p);
-      }
+      if (p !== except) { p.classList.remove('open'); resetCalendarIfNeeded(p); }
     });
     document.querySelectorAll('.icon-btn.open').forEach(function (b) {
       if (b !== except) { b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }
@@ -101,3 +98,22 @@ document.querySelectorAll('.tab-switch').forEach(switcher => {
     loadMonth(link.dataset.month, link.dataset.year);
   });
 })();
+
+function positionDropdown(panel, btn) {
+  const margin = 16;
+  const btnRect = btn.getBoundingClientRect();
+  const panelWidth = panel.offsetWidth || 360;
+
+  // default: right-aligned under the button
+  let left = btnRect.right - panelWidth;
+  // clamp so it never goes past the left edge
+  left = Math.max(margin, left);
+  // clamp so it never goes past the right edge
+  left = Math.min(left, window.innerWidth - panelWidth - margin);
+
+  const top = btnRect.bottom + 12;
+
+  panel.style.left = left + 'px';
+  panel.style.right = 'auto';
+  panel.style.top = top + 'px';
+}
