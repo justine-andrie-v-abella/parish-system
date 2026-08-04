@@ -42,8 +42,6 @@ require_once 'includes/dashboard-header.php';
 
 // Real QR code, if the parish has uploaded one. Otherwise show a clearly
 // labeled placeholder instead of anything that looks scannable/real.
-$gcashQrPath = 'assets/images/gcash-qr.png';
-$hasRealQr = file_exists(__DIR__ . '/' . $gcashQrPath);
 ?>
 
 <style>
@@ -234,35 +232,13 @@ $hasRealQr = file_exists(__DIR__ . '/' . $gcashQrPath);
         </div>
 
         <div class="gcash-panel" id="gcashPanel">
-          <div class="qr-box">
-            <?php if ($hasRealQr): ?>
-              <img src="<?php echo htmlspecialchars($gcashQrPath); ?>" alt="Parish GCash QR code">
-            <?php else: ?>
-              <div class="qr-placeholder">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z"/></svg>
-                QR code placeholder — parish office will confirm your reference number
-              </div>
-            <?php endif; ?>
-          </div>
-
-          <div class="form-group">
-            <label for="referenceNumber">GCash Reference Number</label>
-            <input type="text" name="reference_number" id="referenceNumber" maxlength="50" placeholder="e.g. 1234567890">
-          </div>
-
-          <div class="form-group">
-            <label>Upload Payment Screenshot</label>
-            <div class="upload-drop" id="uploadDrop">
-              <svg class="up-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
-              <p>Click or drag your GCash payment screenshot here (JPG, PNG, WEBP — max 5MB)</p>
-              <input type="file" name="screenshot" id="screenshotInput" accept="image/jpeg,image/png,image/webp">
-            </div>
-            <div class="upload-preview" id="uploadPreview">
-              <img id="previewImg" src="" alt="Screenshot preview">
-              <div class="up-filename" id="previewFilename"></div>
-            </div>
-          </div>
-        </div>
+  <div class="gcash-redirect-note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/>
+    </svg>
+    <span>You'll be redirected to GCash to complete your payment securely. Once approved, your request will be automatically confirmed.</span>
+  </div>
+</div>
 
         <p class="form-error" id="formErrorStep2"></p>
         <p class="form-success" id="formSuccess"></p>
