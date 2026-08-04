@@ -32,11 +32,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var pmGcash = document.getElementById('pmGcash');
   var cashPanel = document.getElementById('cashPanel');
   var gcashPanel = document.getElementById('gcashPanel');
-  var referenceNumberInput = document.getElementById('referenceNumber');
-  var screenshotInput = document.getElementById('screenshotInput');
-  var uploadPreview = document.getElementById('uploadPreview');
-  var previewImg = document.getElementById('previewImg');
-  var previewFilename = document.getElementById('previewFilename');
   var formErrorStep2 = document.getElementById('formErrorStep2');
   var formSuccess = document.getElementById('formSuccess');
   var form = document.getElementById('bookingForm');
@@ -66,8 +61,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var isGcash = pmGcash.checked;
     gcashPanel.classList.toggle('show', isGcash);
     cashPanel.classList.toggle('show', !isGcash);
-    referenceNumberInput.required = isGcash;
-    screenshotInput.required = isGcash;
   }
 
   function openModal(serviceKey, serviceName, serviceFee) {
@@ -81,9 +74,6 @@ document.addEventListener('DOMContentLoaded', function () {
     slotGrid.innerHTML = '<p class="slot-empty">Choose a date to see open times.</p>';
 
     pmCash.checked = true;
-    referenceNumberInput.value = '';
-    screenshotInput.value = '';
-    uploadPreview.classList.remove('show');
     togglePaymentPanels();
 
     formErrorStep1.classList.remove('show');
@@ -178,57 +168,11 @@ document.addEventListener('DOMContentLoaded', function () {
   pmCash.addEventListener('change', togglePaymentPanels);
   pmGcash.addEventListener('change', togglePaymentPanels);
 
-  screenshotInput.addEventListener('change', function () {
-    formErrorStep2.classList.remove('show');
-    var file = screenshotInput.files[0];
-    if (!file) {
-      uploadPreview.classList.remove('show');
-      return;
-    }
-
-    var allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (allowedTypes.indexOf(file.type) === -1) {
-      formErrorStep2.textContent = 'Screenshot must be a JPG, PNG, or WEBP image.';
-      formErrorStep2.classList.add('show');
-      screenshotInput.value = '';
-      uploadPreview.classList.remove('show');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      formErrorStep2.textContent = 'Screenshot is too large. Please upload an image under 5MB.';
-      formErrorStep2.classList.add('show');
-      screenshotInput.value = '';
-      uploadPreview.classList.remove('show');
-      return;
-    }
-
-    var reader = new FileReader();
-    reader.onload = function (e) {
-      previewImg.src = e.target.result;
-      previewFilename.textContent = file.name;
-      uploadPreview.classList.add('show');
-    };
-    reader.readAsDataURL(file);
-  });
-
   // ---------------- Submit ----------------
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     formErrorStep2.classList.remove('show');
     formSuccess.classList.remove('show');
-
-    if (pmGcash.checked) {
-      if (!referenceNumberInput.value.trim()) {
-        formErrorStep2.textContent = 'Please enter your GCash reference number.';
-        formErrorStep2.classList.add('show');
-        return;
-      }
-      if (!screenshotInput.files.length) {
-        formErrorStep2.textContent = 'Please upload a screenshot of your GCash payment.';
-        formErrorStep2.classList.add('show');
-        return;
-      }
-    }
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitting…';
@@ -239,14 +183,10 @@ document.addEventListener('DOMContentLoaded', function () {
     formData.append('appointment_time', timeInput.value);
     formData.append('notes', notesInput.value);
     formData.append('payment_method', pmGcash.checked ? 'gcash' : 'cash');
-    if (pmGcash.checked) {
-      formData.append('reference_number', referenceNumberInput.value.trim());
-      formData.append('screenshot', screenshotInput.files[0]);
-    }
 
     fetch('ajax/book-appointment.php', {
       method: 'POST',
-      body: formData, // no Content-Type header — browser sets the multipart boundary
+      body: formData,
     })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
@@ -255,13 +195,21 @@ document.addEventListener('DOMContentLoaded', function () {
           formErrorStep2.classList.add('show');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Submit Request';
-          // Slot may have been taken while filling out payment — send them back to re-check.
           if (/slot/i.test(res.data.error || '')) {
             showStep(1);
             if (dateInput.value) dateInput.dispatchEvent(new Event('change'));
           }
           return;
         }
+
+        if (res.data.checkout_url) {
+          formSuccess.textContent = 'Redirecting you to GCash to complete payment…';
+          formSuccess.classList.add('show');
+          submitBtn.textContent = 'Redirecting…';
+          window.location.href = res.data.checkout_url;
+          return;
+        }
+
         formSuccess.textContent = 'Request submitted! You can track it under View Requests.';
         formSuccess.classList.add('show');
         submitBtn.textContent = 'Submitted';
