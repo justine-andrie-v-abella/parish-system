@@ -1,4 +1,5 @@
 <?php
+//includes\sidebar.php
 $current = basename($_SERVER['PHP_SELF']);
 $role = $_SESSION['role'] ?? '';
 $fullName = $_SESSION['full_name'] ?? '';

@@ -24,8 +24,8 @@ $hasSidebar = in_array($_SESSION['role'] ?? '', $sidebarRoles, true);
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Jost:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
-<link rel="stylesheet" href="assets/css/dashboard.css?v=2">
-<link rel="stylesheet" href="assets/css/dashboard-sidebar.css?v=2">
+<link rel="stylesheet" href="assets/css/dashboard.css?v=9">
+<link rel="stylesheet" href="assets/css/dashboard-sidebar.css?v=9">
 
 <style>
 .dp-tabs{ position:relative; display:flex; background:var(--cream-deep,#f4ede0); border-radius:10px; padding:3px; margin-bottom:12px; }
