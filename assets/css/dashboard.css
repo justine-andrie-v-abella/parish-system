@@ -1,4 +1,33 @@
 /* ==========================================================================
+   PARISH THEME — Maroon & Gold refresh
+   --------------------------------------------------------------------------
+   Redefining the design tokens (CSS custom properties) used throughout
+   dashboard.css and dashboard-sidebar.css. This block simply needs to load
+   after whatever stylesheet originally defined --navy, --gold, --cream, etc.
+   Everything downstream that references var(--x) picks up the new values
+   automatically — no other file needs to change.
+   ========================================================================== */
+:root{
+  --navy:        #4A3220;   /* warm coffee-brown — primary panel/accent color */
+  --navy-deep:   #2B1D12;   /* deep brown, used in gradients */
+  --gold:        #C9A227;   /* primary gold accent — richer/more saturated */
+  --gold-bright: #E3C468;   /* brighter gold for highlights/active states */
+  --gold-dim:    #A47F2A;   /* muted gold for icons/eyebrow labels */
+  --brown:       #6B4226;   /* secondary warm brown, used sparingly (soon-tags etc.) */
+
+  --cream:       #FAF6EE;   /* page background — warm, not washed out */
+  --cream-deep:  #F0E4CC;   /* card / section fill, a touch deeper */
+  --white:       #FFFFFF;
+
+  --ink:         #2A1913;   /* primary text */
+  --ink-soft:    #7A6656;   /* secondary text */
+  --line:        #E3D2AE;   /* borders */
+
+  --shadow-soft: 0 6px 18px rgba(74,50,32,0.12);
+  --shadow-lift: 0 18px 40px rgba(43,29,18,0.22);
+}
+
+/* ==========================================================================
    Dashboard shell — shared topbar + "coming soon" layout used by all four
    role dashboards until each one gets its full build-out.
    assets/css/dashboard.css
@@ -8,8 +37,8 @@
 
 .dash-topbar{
   position: sticky; top:0; z-index: 200;
-  background: rgba(250,246,236,0.9); backdrop-filter: blur(12px) saturate(140%);
-  border-bottom: 1px solid var(--line);
+  background: linear-gradient(155deg, var(--navy), var(--navy-deep));
+  border-bottom: 1px solid rgba(0,0,0,0.18);
 }
 .dash-topbar-inner{
   max-width: 1180px; margin:0 auto; padding: 14px 28px;
@@ -23,12 +52,12 @@
   flex-shrink: 1;
 }
 .dash-brand strong{
-  font-family: var(--font-display); font-size:18px; color:var(--navy);
+  font-family: var(--font-display); font-size:18px; color:#fff;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .dash-brand span{
   display:block; font-family: var(--font-mono); font-size:9px; letter-spacing:2px;
-  color: var(--gold-dim); text-transform:uppercase;
+  color: var(--gold-bright); text-transform:uppercase;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -40,15 +69,16 @@
 
 .dash-hero{
   background: linear-gradient(155deg, var(--navy), var(--navy-deep));
-  color: var(--cream); border-radius: var(--arch); padding: 40px 36px;
+  color: var(--cream); border-radius: 20px; padding: 28px 40px;
   margin-bottom: 40px; position:relative; overflow:hidden;
+  min-height: 0;
 }
 .dash-hero::before{
   content:''; position:absolute; inset:0;
-  background: radial-gradient(40% 60% at 90% 0%, rgba(198,161,91,0.28), transparent 70%);
+  background: radial-gradient(40% 60% at 90% 0%, rgba(199,154,61,0.32), transparent 70%);
 }
 .dash-hero h1{ color:#fff; font-size: clamp(24px,3vw,32px); position:relative; }
-.dash-hero p{ color: rgba(250,246,236,0.75); max-width:56ch; font-size:14.5px; position:relative; }
+.dash-hero p{ color: rgba(250,246,238,0.78); max-width:56ch; font-size:14.5px; position:relative; }
 
 .dash-section-label{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
 .dash-section-label h2{ font-size:20px; }
@@ -56,6 +86,21 @@
   font-family: var(--font-mono); font-size:10px; letter-spacing:1.5px; text-transform:uppercase;
   color: var(--gold-dim); border:1px solid var(--gold); border-radius:999px; padding:4px 12px;
 }
+
+/* ---------------- Reusable eyebrow label ---------------- */
+.eyebrow{
+  font-family: var(--font-mono); font-size:10px; letter-spacing:1.5px; text-transform:uppercase;
+  color: var(--gold-bright); display:block; margin-bottom:10px;
+}
+
+/* ---------------- Page hero ----------------
+   Same dark brown/gold treatment as the dashboard's welcome hero, sized
+   for a single-column text header — use on secondary pages (Intentions,
+   Requests, Catalog, etc.) so every page opens with the same visual
+   anchor instead of a plain light heading. */
+.page-hero{ padding: 30px 36px; margin-bottom: 36px; }
+.page-hero h1{ margin-bottom:6px; }
+.page-hero p{ margin:0; max-width:64ch; }
 
 .dash-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:18px; }
 @media (max-width:860px){ .dash-grid{ grid-template-columns: repeat(2,1fr); } }
@@ -83,14 +128,19 @@
 .summary-card{
   background: var(--white); border:1px solid var(--line); border-radius: var(--arch-sm);
   padding: 20px 18px; transition: transform .2s, box-shadow .2s;
+  border-top: 3px solid var(--gold);
 }
 .summary-card:hover{ transform: translateY(-3px); box-shadow: var(--shadow-soft); }
 .summary-card .num{ font-family: var(--font-display); font-size:32px; color:var(--navy); font-weight:700; line-height:1; }
 .summary-card .lbl{ font-family: var(--font-mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; color: var(--ink-soft); margin-top:8px; display:block; }
-.summary-card.accent-pending .num{ color:#B8862E; }
-.summary-card.accent-scheduled .num{ color:#33488A; }
-.summary-card.accent-completed .num{ color:#2F6B45; }
-.summary-card.accent-unpaid .num{ color:#A2432F; }
+.summary-card.accent-pending{ border-top-color:#C9891F; }
+.summary-card.accent-pending .num{ color:#B9791C; }
+.summary-card.accent-scheduled{ border-top-color:#2B4A95; }
+.summary-card.accent-scheduled .num{ color:#2B4A95; }
+.summary-card.accent-completed{ border-top-color:#1F7A45; }
+.summary-card.accent-completed .num{ color:#1F7A45; }
+.summary-card.accent-unpaid{ border-top-color:#AD3324; }
+.summary-card.accent-unpaid .num{ color:#AD3324; }
 
 /* ---------------- Two-column layout ---------------- */
 .dash-columns{ display:grid; grid-template-columns: 1.7fr 1fr; gap:24px; align-items:start; margin-bottom:40px; }
@@ -122,16 +172,16 @@
 .cal-cell.empty{ border:none; background:transparent; }
 .cal-cell.today{ border-color: var(--navy); box-shadow: 0 0 0 1px var(--navy) inset; font-weight:600; }
 .cal-cell .dot{ width:7px; height:7px; border-radius:50%; }
-.cal-cell.status-available .dot{ background:#3F9A5C; }
-.cal-cell.status-reserved .dot{ background:#3E5AA8; }
-.cal-cell.status-pending .dot{ background:#D8A227; }
-.cal-cell.status-holiday .dot{ background:#9A958A; }
-.cal-cell.status-full .dot{ background:#C0483A; }
-.cal-cell.status-holiday{ background:#EFEDE8; color:#8A857A; }
-.cal-cell.status-full{ background:#FBEAE7; }
-.cal-cell.status-pending{ background:#FBF3DE; }
-.cal-cell.status-reserved{ background:#EAEEF9; }
-.cal-cell.status-available{ background:#EAF5EC; }
+.cal-cell.status-available .dot{ background:#2F9E52; }
+.cal-cell.status-reserved .dot{ background:#2B4A95; }
+.cal-cell.status-pending .dot{ background:#C9891F; }
+.cal-cell.status-holiday .dot{ background:#8A7D68; }
+.cal-cell.status-full .dot{ background:#B23A2A; }
+.cal-cell.status-holiday{ background:#E7DFCB; color:#6B5D4D; }
+.cal-cell.status-full{ background:#F6D9D2; }
+.cal-cell.status-pending{ background:#F7E8BF; }
+.cal-cell.status-reserved{ background:#DCE4F6; }
+.cal-cell.status-available{ background:#DBF0E1; }
 
 /* ---------------- Upcoming appointment ---------------- */
 .upcoming-card{ display:flex; gap:14px; align-items:flex-start; }
@@ -144,11 +194,11 @@
 .upcoming-date .mon{ font-family: var(--font-mono); font-size:9px; letter-spacing:1px; text-transform:uppercase; color: var(--gold-bright); }
 .upcoming-empty{ color: var(--ink-soft); font-size:13.5px; }
 
-.status-pill{ display:inline-block; font-family: var(--font-mono); font-size:9.5px; letter-spacing:1px; text-transform:uppercase; padding:3px 10px; border-radius:999px; }
-.status-pill.pending{ background:#FBF3DE; color:#9C7C1E; }
-.status-pill.confirmed, .status-pill.approved{ background:#EAEEF9; color:#33488A; }
-.status-pill.completed{ background:#EAF5EC; color:#2F6B45; }
-.status-pill.cancelled, .status-pill.rejected{ background:#FBEAE7; color:#A2432F; }
+.status-pill{ display:inline-block; font-family: var(--font-mono); font-size:9.5px; letter-spacing:1px; text-transform:uppercase; padding:3px 10px; border-radius:999px; font-weight:600; }
+.status-pill.pending{ background:#C9891F; color:#fff; }
+.status-pill.confirmed, .status-pill.approved{ background:#2B4A95; color:#fff; }
+.status-pill.completed{ background:#1F7A45; color:#fff; }
+.status-pill.cancelled, .status-pill.rejected{ background:#AD3324; color:#fff; }
 
 /* ---------------- Notifications ---------------- */
 .notif-item{ display:flex; gap:10px; padding:12px 0; border-bottom:1px dashed var(--line); }
@@ -176,25 +226,37 @@
   padding: 20px; text-align:center; transition: all .2s;
 }
 .quick-action:hover{ transform: translateY(-3px); box-shadow: var(--shadow-soft); border-color: var(--gold); }
-.quick-action .qa-icon{ width:42px; height:42px; margin:0 auto 10px; border-radius:50%; background: var(--cream-deep); color:var(--gold-dim); display:flex; align-items:center; justify-content:center; }
+.quick-action .qa-icon{ width:42px; height:42px; margin:0 auto 10px; border-radius:50%; background: var(--navy); color:var(--gold-bright); display:flex; align-items:center; justify-content:center; }
 .quick-action .qa-icon svg{ width:20px; height:20px; }
 .quick-action span{ font-size:13.5px; font-weight:500; color: var(--navy); }
 
 /* ---------------- Hero: two-column with embedded upcoming appointment ---------------- */
-.dash-hero-grid{ display:grid; grid-template-columns: 1.4fr 1fr; gap:32px; align-items:center; position:relative; }
-@media (max-width:820px){ .dash-hero-grid{ grid-template-columns: 1fr; } }
-
-.hero-upcoming{
-  background: rgba(250,246,236,0.08); border: 1px solid rgba(231,200,131,0.3);
-  border-radius: var(--arch-sm); padding: 20px; backdrop-filter: blur(6px);
+.dash-hero-grid{ display:flex; align-items:center; justify-content:space-between; gap:40px; flex-wrap:wrap; position:relative; width:100%; }
+.dash-hero-grid > div:first-child{ flex:1 1 420px; }
+@media (max-width:820px){
+  .dash-hero-grid{ flex-direction:column; align-items:stretch; gap:20px; }
+  .dash-hero-grid > div:first-child{ flex-basis:auto; }
 }
-.hero-upcoming .hu-label{ font-family: var(--font-mono); font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color: var(--gold-bright); margin-bottom:14px; display:block; }
-.hero-upcoming .upcoming-card{ align-items:center; }
-.hero-upcoming .upcoming-date{ background: linear-gradient(155deg, var(--gold-bright), var(--gold)); color: var(--navy-deep); }
-.hero-upcoming .upcoming-date .mon{ color: var(--navy-deep); opacity:0.7; }
+
+/* Minimal: no card box, no border, no blur — just a thin left divider
+   separating it from the welcome text, like a quiet aside. */
+.hero-upcoming{
+  flex: 0 1 300px;
+  padding-left: 24px;
+  border-left: 1px solid rgba(232,190,92,0.3);
+}
+@media (max-width:820px){ .hero-upcoming{ flex-basis:auto; border-left:none; padding-left:0; border-top: 1px solid rgba(232,190,92,0.3); padding-top:20px; } }
+.hero-upcoming .hu-label{ font-family: var(--font-mono); font-size:9.5px; letter-spacing:1.5px; text-transform:uppercase; color: var(--gold-bright); margin-bottom:12px; display:block; }
+.hero-upcoming .upcoming-card{ align-items:center; gap:12px; }
+.hero-upcoming .upcoming-date{
+  background:none; width:auto; height:auto; border-radius:0;
+  color: var(--gold-bright); flex-direction:row; align-items:baseline; gap:4px;
+}
+.hero-upcoming .upcoming-date .day{ font-size:22px; }
+.hero-upcoming .upcoming-date .mon{ color: var(--gold-bright); opacity:0.75; }
 .hero-upcoming strong{ color:#fff !important; }
-.hero-upcoming span:not(.mon):not(.day){ color: rgba(250,246,236,0.65) !important; }
-.hero-upcoming .upcoming-empty{ color: rgba(250,246,236,0.65); font-size:13.5px; }
+.hero-upcoming span:not(.mon):not(.day){ color: rgba(250,246,238,0.68) !important; }
+.hero-upcoming .upcoming-empty{ color: rgba(250,246,238,0.68); font-size:13.5px; }
 
 /* ---------------- Sliding tab switcher (Notifications / Recent Activity) ---------------- */
 .tab-switch{
@@ -214,7 +276,7 @@
 }
 .tab-btn.active{ color: var(--navy); }
 .tab-btn .tab-count{
-  font-family: var(--font-mono); font-size:10px; background: var(--gold); color:var(--navy-deep);
+  font-family: var(--font-mono); font-size:10px; background: var(--gold); color:#fff;
   border-radius:999px; padding:1px 6px; min-width:16px; text-align:center;
 }
 .tab-panel{ display:none; }
@@ -229,19 +291,19 @@
 .dropdown-wrap{ position: static; }
 
 .icon-btn{
-  width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background: var(--white);
-  display:flex; align-items:center; justify-content:center; color: var(--navy); position:relative;
+  width:38px; height:38px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08);
+  display:flex; align-items:center; justify-content:center; color: #fff; position:relative;
   transition: all .18s;
 }
 .icon-btn svg{ width:17px; height:17px; }
-.icon-btn:hover{ border-color: var(--gold); background: var(--cream-deep); }
-.icon-btn.open{ background: var(--navy); color: var(--cream); border-color: var(--navy); }
+.icon-btn:hover{ border-color: var(--gold); background: rgba(255,255,255,0.16); }
+.icon-btn.open{ background: var(--gold); color: var(--navy-deep); border-color: var(--gold); }
 
 .icon-badge{
   position:absolute; top:-3px; right:-3px; min-width:16px; height:16px; padding:0 4px;
-  background: var(--gold); color: var(--navy-deep); border-radius:999px;
+  background: var(--gold); color: #fff; border-radius:999px;
   font-family: var(--font-mono); font-size:9.5px; font-weight:700;
-  display:flex; align-items:center; justify-content:center; border:2px solid var(--cream);
+  display:flex; align-items:center; justify-content:center; border:2px solid var(--navy);
 }
 
 .dropdown-panel{
@@ -260,20 +322,37 @@
 @media (max-width: 700px){
   .dropdown-panel{
     position: fixed;
-    top: 70px; left: 16px; right: 16px;
+    top: 64px; left: 20px; right: 20px;
     width: auto !important;
     max-width: none;
+    max-height: min(66vh, 440px);
+    padding: 16px;
   }
+
+  /* Scoped to the dropdown only — the goal is a compact popover on phones,
+     not a smaller version of a full calendar page. */
+  .dropdown-panel .cal-head{ margin-bottom:10px; }
+  .dropdown-panel .cal-head .cal-title{ font-size:14.5px; }
+  .dropdown-panel .cal-nav a{ width:24px; height:24px; }
+  .dropdown-panel .cal-nav a svg{ width:11px; height:11px; }
+  .dropdown-panel .cal-legend{ font-size:9.5px; gap:7px; margin-bottom:10px; }
+  .dropdown-panel .cal-legend i{ width:6px; height:6px; }
+  .dropdown-panel .cal-grid{ gap:3px; }
+  .dropdown-panel .cal-dow{ font-size:8px; padding-bottom:3px; }
+  .dropdown-panel .cal-cell{ font-size:9.5px; border-radius:6px; gap:1px; }
+  .dropdown-panel .cal-cell .dot{ width:4px; height:4px; }
+
+  .dropdown-panel .dp-tabs{ margin-bottom:8px; }
+  .dropdown-panel .dp-tab{ font-size:9px; padding:6px 4px; }
+  .dropdown-panel h4{ font-size:13px; margin-bottom:8px; }
+  .dropdown-panel .notif-item{ padding:8px 0; gap:8px; }
+  .dropdown-panel .notif-item p{ font-size:11.5px; }
+  .dropdown-panel .notif-item span.time{ font-size:9px; }
 }
 
-/* ---------------- Whole-page zoom scaling ---------------- */
-/* Instead of letting content reflow/wrap at small widths, shrink
-   the entire dashboard proportionally, like a browser zoom-out.
-   Header, dropdowns, cards, text — everything scales together,
-   so relative positions never change. */
-@media (max-width: 1180px){ body{ zoom: 0.92; } }
-@media (max-width: 1000px){ body{ zoom: 0.82; } }
-@media (max-width: 860px) { body{ zoom: 0.72; } }
-@media (max-width: 700px) { body{ zoom: 0.62; } }
-@media (max-width: 560px) { body{ zoom: 0.52; } }
-@media (max-width: 420px) { body{ zoom: 0.45; } }
+/* Whole-page zoom scaling removed — it's a non-standard, Chromium-only
+   property that doesn't scale position:fixed elements (the mobile sidebar
+   drawer, modal overlays) in sync with the rest of the page, which is what
+   was causing the drawer to render short/misaligned on small screens.
+   Real responsive rules (grid columns, font sizes, the drawer itself)
+   handle small viewports below instead. */

@@ -29,26 +29,33 @@
   padding: 40px clamp(20px, 3vw, 44px) 80px;
 }
 
-/* ---------------- Sidebar (desktop: static column) ---------------- */
+/* ---------------- Sidebar (desktop: static column) ----------------
+   Given its own solid panel color so it reads clearly as a distinct
+   navigation surface rather than blending into the page background. */
 .dash-sidebar{
   width: 232px; flex-shrink:0; position: sticky; top: 78px;
-  padding: 40px 0 40px clamp(20px, 3vw, 44px);
+  align-self: stretch;
+  min-height: calc(100vh - 78px);
+  background: var(--navy);
+  border-radius: 0;
+  padding: 32px 0 32px clamp(18px, 2.4vw, 28px);
+  color: var(--cream);
 }
 .sidebar-mobile-head{ display:none; } /* desktop: hidden, shown only in the drawer */
-.sidebar-nav{ display:flex; flex-direction:column; gap:6px; }
+.sidebar-nav{ display:flex; flex-direction:column; gap:4px; padding-right: clamp(18px, 2.4vw, 28px); }
 .sidebar-link{
-  display:flex; align-items:center; gap:12px; padding: 12px 16px;
-  border-radius: 14px; font-size:14px; color: var(--ink-soft); font-weight:500;
+  display:flex; align-items:center; gap:12px; padding: 11px 14px;
+  border-radius: 10px; font-size:14px; color: rgba(250,246,238,0.68); font-weight:500;
   border: 1px solid transparent; transition: all .18s;
 }
-.sidebar-link:hover{ background: var(--cream-deep); color: var(--navy); }
+.sidebar-link:hover{ background: rgba(250,246,238,0.08); color: #fff; }
 .sidebar-link.active{
-  background: var(--white); border-color: var(--line); color: var(--navy);
-  box-shadow: var(--shadow-soft);
+  background: var(--gold); border-color: var(--gold); color: var(--navy-deep); font-weight:600;
+  box-shadow: none;
 }
 .sidebar-icon{ width:20px; height:20px; flex-shrink:0; color: var(--gold-dim); display:flex; }
 .sidebar-icon svg{ width:100%; height:100%; }
-.sidebar-link.active .sidebar-icon{ color: var(--gold); }
+.sidebar-link.active .sidebar-icon{ color: var(--navy-deep); }
 
 /* ---------------- Mobile hamburger toggle + overlay (hidden on desktop) ---------------- */
 .sidebar-toggle{
@@ -184,6 +191,39 @@
 }
 .btn-cancel-req:hover{ background:#FBEAE7; }
 
+/* ---------------- Sidebar user block (avatar / name / role) ----------------
+   Overridden here (not just inherited from style.css) so it reads correctly
+   against the dark sidebar panel instead of assuming a light background. */
+.sidebar-user{
+  display:flex; align-items:center; gap:12px;
+  padding: 0 clamp(18px, 2.4vw, 28px) 20px 0; margin-bottom: 16px;
+  border-bottom: 1px solid rgba(250,246,238,0.14);
+}
+.sidebar-user .dash-avatar{
+  background: var(--gold); color: var(--navy-deep);
+  border: none; font-weight:700;
+}
+.sidebar-user-info{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+.sidebar-user-info .dash-username{
+  font-size:14px; font-weight:600; color:#fff;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.sidebar-user-info .dash-role-badge{
+  align-self:flex-start; background: rgba(232,190,92,0.16); color: var(--gold-bright);
+  border-color: rgba(232,190,92,0.3);
+}
+
+.sidebar-footer{ margin-top: 24px; padding-top: 16px; padding-right: clamp(18px, 2.4vw, 28px); border-top: 1px solid rgba(250,246,238,0.14); }
+.sidebar-logout{ width:100%; text-align:center; color:#fff; border-color: rgba(250,246,238,0.3); }
+.sidebar-logout:hover{ background: rgba(250,246,238,0.1); border-color: rgba(250,246,238,0.5); }
+
+/* Desktop sidebar is sticky/tall enough to just push the footer down naturally.
+   On the mobile drawer, pin it to the bottom of the panel. */
+@media (max-width: 860px){
+  .dash-sidebar{ display:flex; flex-direction:column; }
+  .sidebar-nav{ flex:1; }
+}
+
 /* ==========================================================================
    Responsive breakpoints
    ========================================================================== */
@@ -197,8 +237,9 @@
   .dash-shell .dash-main{ padding: 24px clamp(16px, 4vw, 32px) 70px; }
 
   .dash-sidebar{
-    position: fixed; top:0; left:0; height:100vh; width: 260px; max-width: 78vw;
-    background: var(--cream); z-index: 1001;
+    position: fixed; top:0; left:0; height:100vh; min-height:0; width: 260px; max-width: 78vw;
+    background: var(--navy); z-index: 1001;
+    border-radius: 0;
     padding: 18px 18px 24px;
     transform: translateX(-100%);
     transition: transform .28s var(--ease);
@@ -209,13 +250,15 @@
 
   .sidebar-mobile-head{
     display:flex; align-items:center; justify-content:space-between;
-    font-family: var(--font-display); font-size:18px; color: var(--navy); font-weight:600;
-    padding-bottom:14px; margin-bottom:12px; border-bottom:1px solid var(--line);
+    font-family: var(--font-display); font-size:18px; color: #fff; font-weight:600;
+    padding-bottom:14px; margin-bottom:12px; border-bottom:1px solid rgba(250,246,238,0.14);
   }
-  .sidebar-close{ background:none; border:none; font-size:24px; line-height:1; color: var(--ink-soft); padding:4px; }
-  .sidebar-close:hover{ color: var(--navy); }
+  .sidebar-close{ background:none; border:none; font-size:24px; line-height:1; color: rgba(250,246,238,0.7); padding:4px; }
+  .sidebar-close:hover{ color: #fff; }
 
-  .sidebar-nav{ flex-direction:column; gap:4px; }
+  .sidebar-nav{ flex-direction:column; gap:4px; padding-right:0; }
+  .sidebar-user{ padding-right:0; }
+  .sidebar-footer{ padding-right:0; }
 }
 
 /* ---- Phone: scale everything down so it reads as a compact mobile
@@ -228,10 +271,10 @@
 
   .dash-shell .dash-main{ padding: 16px 16px 56px; }
 
-  .dash-hero{ padding: 24px 20px; border-radius: 28px 28px 8px 8px; }
+  .dash-hero{ padding: 22px 20px; border-radius: 18px; }
   .dash-hero h1{ font-size:22px; }
   .dash-hero p{ font-size:13px; }
-  .hero-upcoming{ padding:14px; }
+  .hero-upcoming{ padding-left:0; border-left:none; }
 
   .summary-grid{ grid-template-columns: repeat(2, 1fr); gap:10px; margin-bottom:24px; }
   .summary-card{ padding:14px 12px; }
@@ -247,32 +290,23 @@
   .page-head h1{ font-size:21px; }
   .page-head p{ font-size:13px; }
 
-  .intentions-grid{ grid-template-columns: 1fr; gap:16px; }
-  .intention-card{ padding:22px 18px 18px; }
+  .page-hero{ padding: 22px 20px; border-radius: 18px; }
+  .page-hero h1{ font-size:20px; }
+  .page-hero p{ font-size:13px; }
+
+  .intentions-grid{ grid-template-columns: 1fr; gap:14px; }
+  .intention-card{ padding:18px 16px 16px; }
+  .intention-card .service-icon{ width:40px; height:40px; margin-bottom:10px; }
+  .intention-card .service-icon svg{ width:20px; height:20px; }
+  .intention-card h3{ font-size:16px; margin-bottom:4px; }
+  .intention-card .desc{ font-size:12.5px; min-height:0; }
+  .intention-card .service-fee{ font-size:12px; margin:8px 0 2px; }
+  .req-toggle{ font-size:9.5px; margin:8px 0 2px; }
+  .intention-reqs li{ font-size:12px; }
+  .intention-card .btn-book{ margin-top:12px; padding:11px; font-size:12.5px; }
 
   .modal-box{ padding:22px 18px; border-radius: 28px 28px 8px 8px; }
   .slot-grid{ grid-template-columns: repeat(3,1fr); }
 
   .requests-table th, .requests-table td{ padding: 10px 12px; font-size:12.5px; }
-}
-
-.sidebar-user{
-  display:flex; align-items:center; gap:12px;
-  padding: 0 4px 20px; margin-bottom: 16px; border-bottom: 1px solid var(--line);
-}
-.sidebar-user-info{ display:flex; flex-direction:column; gap:6px; min-width:0; }
-.sidebar-user-info .dash-username{
-  font-size:14px; font-weight:600; color:var(--navy);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.sidebar-user-info .dash-role-badge{ align-self:flex-start; }
-
-.sidebar-footer{ margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
-.sidebar-logout{ width:100%; text-align:center; }
-
-/* Desktop sidebar is sticky/tall enough to just push the footer down naturally.
-   On the mobile drawer, pin it to the bottom of the panel. */
-@media (max-width: 860px){
-  .dash-sidebar{ display:flex; flex-direction:column; }
-  .sidebar-nav{ flex:1; }
 }

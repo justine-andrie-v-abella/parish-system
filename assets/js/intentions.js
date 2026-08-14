@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', function () {
   var pmGcash = document.getElementById('pmGcash');
   var cashPanel = document.getElementById('cashPanel');
   var gcashPanel = document.getElementById('gcashPanel');
+  var gcashRedirectStatus = document.getElementById('gcashRedirectStatus');
+  var gcashRedirectText = document.getElementById('gcashRedirectText');
   var formErrorStep2 = document.getElementById('formErrorStep2');
   var formSuccess = document.getElementById('formSuccess');
   var form = document.getElementById('bookingForm');
@@ -75,6 +77,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     pmCash.checked = true;
     togglePaymentPanels();
+    gcashRedirectStatus.classList.remove('show');
 
     formErrorStep1.classList.remove('show');
     formErrorStep2.classList.remove('show');
@@ -177,6 +180,11 @@ document.addEventListener('DOMContentLoaded', function () {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitting…';
 
+    if (pmGcash.checked) {
+      gcashRedirectStatus.classList.add('show');
+      gcashRedirectText.textContent = 'Connecting to GCash…';
+    }
+
     var formData = new FormData();
     formData.append('service_key', serviceKeyInput.value);
     formData.append('appointment_date', dateInput.value);
@@ -191,6 +199,7 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok || res.data.error) {
+          gcashRedirectStatus.classList.remove('show');
           formErrorStep2.textContent = res.data.error || 'Something went wrong. Please try again.';
           formErrorStep2.classList.add('show');
           submitBtn.disabled = false;
@@ -203,10 +212,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (res.data.checkout_url) {
-          formSuccess.textContent = 'Redirecting you to GCash to complete payment…';
-          formSuccess.classList.add('show');
+          gcashRedirectText.textContent = 'Redirecting you to GCash now…';
           submitBtn.textContent = 'Redirecting…';
-          window.location.href = res.data.checkout_url;
+          setTimeout(function () {
+            window.location.href = res.data.checkout_url;
+          }, 600);
           return;
         }
 
@@ -218,6 +228,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 1200);
       })
       .catch(function () {
+        gcashRedirectStatus.classList.remove('show');
         formErrorStep2.textContent = 'Network error. Please try again.';
         formErrorStep2.classList.add('show');
         submitBtn.disabled = false;
