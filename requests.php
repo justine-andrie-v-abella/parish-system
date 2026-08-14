@@ -1,4 +1,5 @@
 <?php
+//requests.php
 require_once 'includes/config.php';
 require_role(['parishioner']);
 require_once 'includes/db.php';
@@ -44,7 +45,7 @@ $page_title = 'View Requests — ' . $parish['name'];
 require_once 'includes/dashboard-header.php';
 ?>
 
-<div class="page-head">
+<div class="dash-hero page-hero">
   <span class="eyebrow">View Requests</span>
   <h1>Your appointment requests</h1>
   <p>Every intention you've requested, with its current status and payment standing. You can cancel a request while it's still pending.</p>

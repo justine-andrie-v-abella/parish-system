@@ -1,4 +1,4 @@
- <?php
+<?php
  //intentions.php
 require_once 'includes/config.php';
 require_role(['parishioner']);
@@ -77,23 +77,13 @@ require_once 'includes/dashboard-header.php';
 .gcash-panel, .cash-panel{ display:none; }
 .gcash-panel.show, .cash-panel.show{ display:block; }
 
-.qr-box{
-  width:180px; height:180px; margin: 0 auto 14px; border-radius:14px; border:1px dashed var(--line);
-  display:flex; align-items:center; justify-content:center; overflow:hidden; background: var(--cream-deep);
-}
 .qr-box img{ width:100%; height:100%; object-fit:contain; }
-.qr-placeholder{ text-align:center; padding:14px; color: var(--ink-soft); font-size:11.5px; }
 .qr-placeholder svg{ width:32px; height:32px; margin: 0 auto 8px; color: var(--gold-dim); }
 
-.upload-drop{
-  border:1.5px dashed var(--line); border-radius:14px; padding:18px; text-align:center; cursor:pointer;
-  transition: border-color .18s; position:relative;
-}
 .upload-drop:hover{ border-color: var(--gold); }
 .upload-drop input[type=file]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
 .upload-drop .up-icon{ width:26px; height:26px; margin:0 auto 8px; color: var(--gold-dim); }
 .upload-drop p{ font-size:12.5px; color: var(--ink-soft); margin:0; }
-.upload-preview{ display:none; margin-top:12px; text-align:center; }
 .upload-preview.show{ display:block; }
 .upload-preview img{ max-width:140px; max-height:140px; border-radius:10px; border:1px solid var(--line); }
 .upload-preview .up-filename{ font-size:11.5px; color: var(--ink-soft); margin-top:6px; word-break:break-all; }
@@ -103,12 +93,25 @@ require_once 'includes/dashboard-header.php';
   border-radius:12px; padding:14px; font-size:13px; color: var(--brown);
 }
 .cash-reminder svg{ width:18px; height:18px; flex-shrink:0; color: var(--gold-dim); }
+.gcash-redirect-status{
+  display:none; align-items:center; gap:10px; margin-top:14px;
+  padding:12px 14px; background: var(--cream-deep); border-radius:10px;
+  font-size:12.5px; color: var(--ink-soft);
+}
+.gcash-redirect-status.show{ display:flex; }
+
+.redirect-spinner{
+  width:16px; height:16px; border-radius:50%;
+  border:2px solid var(--line); border-top-color: var(--gold);
+  animation: spin .7s linear infinite; flex-shrink:0;
+}
+@keyframes spin{ to{ transform: rotate(360deg); } }
 </style>
 
-<div class="page-head">
+<div class="dash-hero page-hero">
   <span class="eyebrow">My Intentions</span>
   <h1>Request a sacrament or Mass intention</h1>
-  <p>Pick a service below to see its requirements and fee, then choose an open date and time. Your request goes to the parish office as <strong>pending</strong> until a secretary confirms it.</p>
+  <p>Pick a service below to see its requirements and fee, then choose an open date and time.</p>
 </div>
 
 <div class="intentions-grid">
@@ -232,13 +235,18 @@ require_once 'includes/dashboard-header.php';
         </div>
 
         <div class="gcash-panel" id="gcashPanel">
-  <div class="gcash-redirect-note">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/>
-    </svg>
-    <span>You'll be redirected to GCash to complete your payment securely. Once approved, your request will be automatically confirmed.</span>
-  </div>
-</div>
+          <div class="gcash-redirect-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/>
+            </svg>
+            <span>You'll be redirected to GCash to complete your payment securely. Once approved, your request is automatically confirmed — no screenshots or reference numbers needed.</span>
+          </div>
+
+          <div class="gcash-redirect-status" id="gcashRedirectStatus">
+            <div class="redirect-spinner"></div>
+            <span id="gcashRedirectText">Connecting to GCash&hellip;</span>
+          </div>
+        </div>
 
         <p class="form-error" id="formErrorStep2"></p>
         <p class="form-success" id="formSuccess"></p>
