@@ -20,6 +20,18 @@ if ($id <= 0) {
     exit;
 }
 
+$receiptNumber = trim((string) ($_POST['receipt_number'] ?? ''));
+if ($receiptNumber === '') {
+    http_response_code(422);
+    echo json_encode(['error' => 'Please enter a receipt number.']);
+    exit;
+}
+if (mb_strlen($receiptNumber) > 50) {
+    http_response_code(422);
+    echo json_encode(['error' => 'Receipt number is too long.']);
+    exit;
+}
+
 $treasurerId = (int) $_SESSION['user_id'];
 
 try {
@@ -42,7 +54,15 @@ try {
         exit;
     }
 
-    $receiptNumber = generate_receipt_number($id);
+    // Manual receipt numbers must be unique across appointments.
+    $dupe = $pdo->prepare('SELECT id FROM appointments WHERE receipt_number = ? AND id != ?');
+    $dupe->execute([$receiptNumber, $id]);
+    if ($dupe->fetch()) {
+        $pdo->rollBack();
+        http_response_code(409);
+        echo json_encode(['error' => 'That receipt number is already in use on another request.']);
+        exit;
+    }
 
     $update = $pdo->prepare(
         "UPDATE appointments

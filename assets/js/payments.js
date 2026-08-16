@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var vdScreenshotImg = document.getElementById('vdScreenshotImg');
   var vdScreenshotLink = document.getElementById('vdScreenshotLink');
   var vdNoScreenshot = document.getElementById('vdNoScreenshot');
+  var vdReceiptInput = document.getElementById('vdReceiptInput');
 
   function openVerifyModal(btn) {
     currentVerifyId = btn.dataset.verifyId;
@@ -26,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
     vdService.textContent = btn.dataset.service;
     vdDate.textContent = btn.dataset.date;
     vdAmount.textContent = '₱' + btn.dataset.amount;
+    vdReceiptInput.value = btn.dataset.suggestedReceipt || '';
 
     var method = btn.dataset.method;
     var reference = btn.dataset.reference;
@@ -74,6 +76,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
   verifyConfirm.addEventListener('click', function () {
     if (!currentVerifyId) return;
+
+    var receiptNumber = vdReceiptInput.value.trim();
+    if (!receiptNumber) {
+      verifyError.textContent = 'Please enter a receipt number.';
+      verifyError.classList.add('show');
+      vdReceiptInput.focus();
+      return;
+    }
+
     verifyError.classList.remove('show');
     verifyConfirm.disabled = true;
     verifyConfirm.textContent = 'Verifying…';
@@ -81,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function () {
     fetch('ajax/verify-payment.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ id: currentVerifyId }),
+      body: new URLSearchParams({ id: currentVerifyId, receipt_number: receiptNumber }),
     })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {

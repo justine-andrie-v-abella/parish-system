@@ -156,14 +156,15 @@ require_once 'includes/dashboard-header.php';
               <div class="row-actions">
                 <?php if ($r['payment_status'] === 'unpaid'): ?>
                   <button type="button" class="verify-btn"
-                    data-verify-id="<?php echo $r['id']; ?>"
-                    data-parishioner="<?php echo htmlspecialchars($r['full_name']); ?>"
-                    data-service="<?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?>"
-                    data-amount="<?php echo number_format(payment_amount($r['service_key'], $feeMap)); ?>"
-                    data-method="<?php echo htmlspecialchars($r['payment_method'] ?? ''); ?>"
-                    data-reference="<?php echo htmlspecialchars($r['reference_number'] ?? ''); ?>"
-                    data-screenshot="<?php echo htmlspecialchars($r['payment_screenshot'] ?? ''); ?>"
-                    data-date="<?php echo date('F j, Y', strtotime($r['appointment_date'])); ?>">View &amp; Verify</button>
+                  data-verify-id="<?php echo $r['id']; ?>"
+                  data-parishioner="<?php echo htmlspecialchars($r['full_name']); ?>"
+                  data-service="<?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?>"
+                  data-amount="<?php echo number_format(payment_amount($r['service_key'], $feeMap)); ?>"
+                  data-method="<?php echo htmlspecialchars($r['payment_method'] ?? ''); ?>"
+                  data-reference="<?php echo htmlspecialchars($r['reference_number'] ?? ''); ?>"
+                  data-screenshot="<?php echo htmlspecialchars($r['payment_screenshot'] ?? ''); ?>"
+                  data-date="<?php echo date('F j, Y', strtotime($r['appointment_date'])); ?>"
+                  data-suggested-receipt="<?php echo htmlspecialchars(generate_receipt_number($r['id'])); ?>">View &amp; Verify</button>
                   <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>">Reject</button>
                 <?php elseif ($r['payment_status'] === 'paid'): ?>
                   <a href="receipt.php?id=<?php echo $r['id']; ?>" target="_blank">Receipt</a>
@@ -207,7 +208,14 @@ require_once 'includes/dashboard-header.php';
       No screenshot was submitted — this is likely a cash payment collected at the office. Verify once cash is received.
     </div>
 
-    <p class="reject-error" id="verifyError"></p>
+    <div style="margin-top:14px;">
+    <label for="vdReceiptInput" style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); display:block; margin-bottom:6px;">Receipt Number</label>
+    <input type="text" id="vdReceiptInput" placeholder="e.g. OR-2026-0001"
+      style="width:100%; border:1px solid var(--line); border-radius:12px; padding:11px 14px; font-family:'IBM Plex Mono',monospace; font-size:13.5px;">
+    <p style="font-size:11px; color:var(--ink-soft); margin-top:6px;">Enter the number from the physical receipt you're issuing. We've suggested one below, but overwrite it if you're using a printed booklet.</p>
+  </div>
+
+  <p class="reject-error" id="verifyError"></p>
 
     <div class="reject-modal-actions">
       <button type="button" class="btn btn-outline btn-sm" id="verifyCancel">Cancel</button>
@@ -230,6 +238,6 @@ require_once 'includes/dashboard-header.php';
   </div>
 </div>
 
-<script src="assets/js/payments.js"></script>
+<script src="assets/js/payments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/payments.js'); ?>"></script>
 
 <?php require_once 'includes/dashboard-footer.php'; ?>
