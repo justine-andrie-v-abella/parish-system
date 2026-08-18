@@ -1,4 +1,5 @@
 <?php
+//parish-system\catalog.php
 require_once 'includes/config.php';
 require_role(['priest']);
 require_once 'includes/db.php';
@@ -10,7 +11,7 @@ $pid = (int) $_SESSION['user_id'];
 $notifStmt = $pdo->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 5');
 $notifStmt->execute([$pid]);
 $notifications = $notifStmt->fetchAll();
-$unreadCount = count(array_filter($notifications, fn($n) => !$n['is_read']));
+$unreadCount = count(array_filter($notifications, fn($n) => !is_true($n['is_read'])));
 
 ob_start();
 ?>
@@ -19,7 +20,7 @@ ob_start();
     <p class="upcoming-empty">You're all caught up.</p>
   <?php else: ?>
     <?php foreach ($notifications as $n): ?>
-      <div class="notif-item<?php echo $n['is_read'] ? '' : ' unread'; ?>">
+      <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>">
         <span class="notif-dot"></span>
         <div><p><?php echo htmlspecialchars(preg_replace('/^DEMO:\s*/', '', $n['message'])); ?></p>
         <span class="time"><?php echo date('M j, g:i A', strtotime($n['created_at'])); ?></span></div>
@@ -35,7 +36,7 @@ $year  = isset($_GET['year'])  ? (int) $_GET['year'] : (int) date('Y');
 $calendarPanelHtml = render_calendar_fragment($pdo, $month, $year);
 
 // ---------------- Check the catalog migration has been applied ----------------
-$catalogReady = $pdo->query("SHOW TABLES LIKE 'services'")->rowCount() > 0;
+$catalogReady = $pdo->query("SELECT to_regclass('public.services')")->fetchColumn() !== null;
 
 $catalogRows = [];
 $catalogRequirements = [];
@@ -119,8 +120,8 @@ $icons = [
         $reqLines = $catalogRequirements[$s['service_key']] ?? [];
         $usage = $usageCounts[$s['service_key']] ?? 0;
     ?>
-      <div class="catalog-card<?php echo $s['is_active'] ? '' : ' inactive'; ?>">
-        <?php if (!$s['is_active']): ?><span class="inactive-tag">Inactive</span><?php endif; ?>
+      <div class="catalog-card<?php echo is_true($s['is_active']) ? '' : ' inactive'; ?>">
+        <?php if (!is_true($s['is_active'])): ?><span class="inactive-tag">Inactive</span><?php endif; ?>
         <div class="service-icon" style="width:44px;height:44px;border-radius:50%;background:var(--cream-deep);color:var(--gold-dim);display:flex;align-items:center;justify-content:center;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20"><?php echo $icons[$s['icon']] ?? $icons['candle']; ?></svg>
         </div>
@@ -138,7 +139,7 @@ $icons = [
             data-active="<?php echo $s['is_active']; ?>"
             data-requirements="<?php echo htmlspecialchars(implode("\n", $reqLines)); ?>">Edit</button>
           <button type="button" class="toggle-service-btn" data-id="<?php echo $s['id']; ?>" data-active="<?php echo $s['is_active']; ?>">
-            <?php echo $s['is_active'] ? 'Deactivate' : 'Activate'; ?>
+            <?php echo is_true($s['is_active']) ? 'Deactivate' : 'Activate'; ?>
           </button>
           <button type="button" class="danger delete-service-btn" data-id="<?php echo $s['id']; ?>" data-name="<?php echo htmlspecialchars($s['name']); ?>" data-usage="<?php echo $usage; ?>">Delete</button>
         </div>
