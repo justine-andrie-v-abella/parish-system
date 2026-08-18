@@ -14,7 +14,7 @@ $serviceNames = array_column($services, 'name', 'key');
 $notifStmt = $pdo->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 5');
 $notifStmt->execute([$pid]);
 $notifications = $notifStmt->fetchAll();
-$unreadCount = count(array_filter($notifications, fn($n) => !$n['is_read']));
+$unreadCount = count(array_filter($notifications, fn($n) => !is_true($n['is_read'])));
 
 ob_start();
 ?>
@@ -23,7 +23,7 @@ ob_start();
     <p class="upcoming-empty">You're all caught up.</p>
   <?php else: ?>
     <?php foreach ($notifications as $n): ?>
-      <div class="notif-item<?php echo $n['is_read'] ? '' : ' unread'; ?>">
+      <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>">
         <span class="notif-dot"></span>
         <div>
           <p><?php echo htmlspecialchars(preg_replace('/^DEMO:\s*/', '', $n['message'])); ?></p>

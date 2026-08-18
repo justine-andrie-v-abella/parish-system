@@ -16,7 +16,7 @@ $pendingReq = $pdo->prepare("SELECT COUNT(*) FROM appointments WHERE user_id = ?
 $pendingReq->execute([$uid]);
 $pendingRequests = (int) $pendingReq->fetchColumn();
 
-$scheduledReq = $pdo->prepare("SELECT COUNT(*) FROM appointments WHERE user_id = ? AND status IN ('confirmed','approved') AND appointment_date >= CURDATE()");
+$scheduledReq = $pdo->prepare("SELECT COUNT(*) FROM appointments WHERE user_id = ? AND status IN ('confirmed','approved') AND appointment_date >= CURRENT_DATE");
 $scheduledReq->execute([$uid]);
 $scheduledAppointments = (int) $scheduledReq->fetchColumn();
 
@@ -31,7 +31,7 @@ $unpaidAppointments = (int) $unpaidReq->fetchColumn();
 // ---------------- Upcoming appointment ----------------
 $upcomingStmt = $pdo->prepare(
     "SELECT * FROM appointments WHERE user_id = ? AND status IN ('pending','confirmed','approved')
-     AND appointment_date >= CURDATE() ORDER BY appointment_date ASC, appointment_time ASC LIMIT 1"
+     AND appointment_date >= CURRENT_DATE ORDER BY appointment_date ASC, appointment_time ASC LIMIT 1"
 );
 $upcomingStmt->execute([$uid]);
 $upcoming = $upcomingStmt->fetch();
@@ -54,7 +54,7 @@ $activityText = [
 $notifStmt = $pdo->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 5');
 $notifStmt->execute([$uid]);
 $notifications = $notifStmt->fetchAll();
-$unreadCount = count(array_filter($notifications, fn($n) => !$n['is_read']));
+$unreadCount = count(array_filter($notifications, fn($n) => !is_true($n['is_read'])));
 
 // ---------------- Calendar (current month, or ?month=&year=) ----------------
 $month = isset($_GET['month']) ? max(1, min(12, (int) $_GET['month'])) : (int) date('n');
@@ -196,7 +196,7 @@ ob_start();
   <p class="upcoming-empty">You're all caught up.</p>
 <?php else: ?>
   <?php foreach ($notifications as $n): ?>
-    <div class="notif-item<?php echo $n['is_read'] ? '' : ' unread'; ?>">
+    <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>">
       <span class="notif-dot"></span>
       <div>
         <p><?php echo htmlspecialchars(preg_replace('/^DEMO:\s*/', '', $n['message'])); ?></p>

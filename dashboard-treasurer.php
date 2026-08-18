@@ -14,7 +14,7 @@ $today = date('Y-m-d');
 $notifStmt = $pdo->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 5');
 $notifStmt->execute([$tid]);
 $notifications = $notifStmt->fetchAll();
-$unreadCount = count(array_filter($notifications, fn($n) => !$n['is_read']));
+$unreadCount = count(array_filter($notifications, fn($n) => !is_true($n['is_read'])));
 
 ob_start();
 ?>

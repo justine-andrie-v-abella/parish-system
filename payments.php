@@ -1,4 +1,5 @@
 <?php
+//parish-system\payments.php
 require_once 'includes/config.php';
 require_role(['treasurer']);
 require_once 'includes/db.php';
@@ -107,6 +108,13 @@ require_once 'includes/dashboard-header.php';
 .vd-row{ display:flex; justify-content:space-between; font-size:13.5px; padding-bottom:8px; border-bottom:1px dashed var(--line); }
 .vd-row span:first-child{ color:var(--ink-soft); }
 .vd-row span:last-child{ font-weight:500; color:var(--navy); text-align:right; }
+
+.vd-confirm-check{
+  display:flex; align-items:flex-start; gap:10px; margin-top:16px;
+  padding:12px 14px; background:var(--cream-deep); border-radius:12px; border:1px solid var(--line);
+}
+.vd-confirm-check input[type="checkbox"]{ margin-top:2px; width:16px; height:16px; flex-shrink:0; accent-color: var(--navy); }
+.vd-confirm-check label{ font-size:12.5px; color:var(--ink-soft); line-height:1.4; cursor:pointer; }
 </style>
 
 <div class="page-head">
@@ -209,13 +217,18 @@ require_once 'includes/dashboard-header.php';
     </div>
 
     <div style="margin-top:14px;">
-    <label for="vdReceiptInput" style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); display:block; margin-bottom:6px;">Receipt Number</label>
-    <input type="text" id="vdReceiptInput" placeholder="e.g. OR-2026-0001"
-      style="width:100%; border:1px solid var(--line); border-radius:12px; padding:11px 14px; font-family:'IBM Plex Mono',monospace; font-size:13.5px;">
-    <p style="font-size:11px; color:var(--ink-soft); margin-top:6px;">Enter the number from the physical receipt you're issuing. We've suggested one below, but overwrite it if you're using a printed booklet.</p>
-  </div>
+      <label for="vdReceiptInput" style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); display:block; margin-bottom:6px;">Receipt Number</label>
+      <input type="text" id="vdReceiptInput" placeholder="e.g. OR-2026-0001"
+        style="width:100%; border:1px solid var(--line); border-radius:12px; padding:11px 14px; font-family:'IBM Plex Mono',monospace; font-size:13.5px;">
+      <p style="font-size:11px; color:var(--ink-soft); margin-top:6px;">Enter the number from the physical receipt you're issuing. We've suggested one below, but overwrite it if you're using a printed booklet.</p>
+    </div>
 
-  <p class="reject-error" id="verifyError"></p>
+    <div class="vd-confirm-check">
+      <input type="checkbox" id="vdConfirmCheck">
+      <label for="vdConfirmCheck">I have checked the amount, reference number, and proof of payment, and confirm this payment was received in full.</label>
+    </div>
+
+    <p class="reject-error" id="verifyError"></p>
 
     <div class="reject-modal-actions">
       <button type="button" class="btn btn-outline btn-sm" id="verifyCancel">Cancel</button>

@@ -40,7 +40,7 @@ if ($password !== $confirm) {
 }
 
 // Validate the invite code: must exist, match the chosen role, and be unused.
-$codeStmt = $pdo->prepare('SELECT * FROM invite_codes WHERE code = ? AND role = ? AND is_used = 0');
+$codeStmt = $pdo->prepare('SELECT * FROM invite_codes WHERE code = ? AND role = ? AND is_used = FALSE');
 $codeStmt->execute([$code, $role]);
 $invite = $codeStmt->fetch();
 if (!$invite) {
@@ -63,7 +63,7 @@ try {
     $insert->execute([$role, $fullname, $email, $hash]);
     $userId = $pdo->lastInsertId();
 
-    $markUsed = $pdo->prepare('UPDATE invite_codes SET is_used = 1, used_by = ? WHERE id = ?');
+    $markUsed = $pdo->prepare('UPDATE invite_codes SET is_used = TRUE, used_by = ? WHERE id = ?');
     $markUsed->execute([$userId, $invite['id']]);
 
     $pdo->commit();
