@@ -86,14 +86,14 @@ $catalog_icon_keys = ['dove', 'flame', 'rings', 'cross', 'candle', 'vessel'];
 try {
     require_once __DIR__ . '/db-credentials.php';
     $catalogPdo = new PDO(
-        "mysql:host={$DB_HOST};dbname={$DB_NAME};charset=utf8mb4",
+        "pgsql:host={$DB_HOST};port={$DB_PORT};dbname={$DB_NAME};sslmode=require",
         $DB_USER, $DB_PASS,
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
     );
 
-    if ($catalogPdo->query("SHOW TABLES LIKE 'services'")->rowCount() > 0) {
+    if ($catalogPdo->query("SELECT to_regclass('public.services')")->fetchColumn() !== null) {
         $dbServices = $catalogPdo->query(
-            "SELECT service_key, icon, name, description, fee FROM services WHERE is_active = 1 ORDER BY sort_order ASC, id ASC"
+            "SELECT service_key, icon, name, description, fee FROM services WHERE is_active = TRUE ORDER BY sort_order ASC, id ASC"
         )->fetchAll();
 
         if ($dbServices) {

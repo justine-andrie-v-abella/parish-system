@@ -8,7 +8,7 @@ require_once __DIR__ . '/db-credentials.php';
 if (!isset($pdo) || !($pdo instanceof PDO)) {
     try {
         $pdo = new PDO(
-            "mysql:host={$DB_HOST};dbname={$DB_NAME};charset=utf8mb4",
+            "pgsql:host={$DB_HOST};port={$DB_PORT};dbname={$DB_NAME};sslmode=require",
             $DB_USER,
             $DB_PASS,
             [
@@ -19,7 +19,10 @@ if (!isset($pdo) || !($pdo instanceof PDO)) {
         );
     } catch (PDOException $e) {
         http_response_code(500);
-        // In production, log $e->getMessage() instead of echoing it.
-        die('Database connection failed. Make sure MySQL is running and database/schema.sql has been imported. (' . $e->getMessage() . ')');
+        die('Database connection failed. Check your Supabase connection details in .env. (' . $e->getMessage() . ')');
     }
+}
+
+function is_true($val): bool {
+    return $val === true || $val === 't' || $val === '1' || $val === 1;
 }
