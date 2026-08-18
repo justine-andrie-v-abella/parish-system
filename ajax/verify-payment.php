@@ -32,6 +32,16 @@ if (mb_strlen($receiptNumber) > 50) {
     exit;
 }
 
+// The treasurer must explicitly confirm they checked the payment details
+// before we mark this as paid. Without this, the checkbox in the UI is
+// purely cosmetic and can be bypassed with a raw POST.
+$confirmed = ($_POST['confirmed'] ?? '') === '1';
+if (!$confirmed) {
+    http_response_code(422);
+    echo json_encode(['error' => 'Please confirm you have checked the payment details before verifying.']);
+    exit;
+}
+
 $treasurerId = (int) $_SESSION['user_id'];
 
 try {
