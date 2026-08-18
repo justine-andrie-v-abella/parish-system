@@ -72,12 +72,12 @@ try {
     $pdo->beginTransaction();
 
     $check = $pdo->prepare(
-        "SELECT COUNT(*) FROM appointments
-         WHERE appointment_date = ? AND appointment_time = ?
-         AND status NOT IN ('cancelled','rejected') FOR UPDATE"
+        "SELECT id FROM appointments
+        WHERE appointment_date = ? AND appointment_time = ?
+        AND status NOT IN ('cancelled','rejected') FOR UPDATE"
     );
     $check->execute([$date, $time]);
-    if ((int) $check->fetchColumn() > 0) {
+    if ($check->fetch()) {
         $pdo->rollBack();
         http_response_code(409);
         echo json_encode(['error' => 'Sorry, that time slot was just taken. Please pick another.']);
@@ -138,6 +138,7 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
+    error_log('book-appointment.php: ' . $e->getMessage());
     http_response_code(500);
     echo json_encode(['error' => 'Something went wrong saving your request. Please try again.']);
 }
