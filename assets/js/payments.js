@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var vdScreenshotLink = document.getElementById('vdScreenshotLink');
   var vdNoScreenshot = document.getElementById('vdNoScreenshot');
   var vdReceiptInput = document.getElementById('vdReceiptInput');
+  var vdConfirmCheck = document.getElementById('vdConfirmCheck');
 
   function openVerifyModal(btn) {
     currentVerifyId = btn.dataset.verifyId;
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
     vdDate.textContent = btn.dataset.date;
     vdAmount.textContent = '₱' + btn.dataset.amount;
     vdReceiptInput.value = btn.dataset.suggestedReceipt || '';
+    vdConfirmCheck.checked = false;
 
     var method = btn.dataset.method;
     var reference = btn.dataset.reference;
@@ -85,6 +87,13 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
+    if (!vdConfirmCheck.checked) {
+      verifyError.textContent = 'Please confirm you have checked the payment details before verifying.';
+      verifyError.classList.add('show');
+      vdConfirmCheck.focus();
+      return;
+    }
+
     verifyError.classList.remove('show');
     verifyConfirm.disabled = true;
     verifyConfirm.textContent = 'Verifying…';
@@ -92,7 +101,11 @@ document.addEventListener('DOMContentLoaded', function () {
     fetch('ajax/verify-payment.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ id: currentVerifyId, receipt_number: receiptNumber }),
+      body: new URLSearchParams({
+        id: currentVerifyId,
+        receipt_number: receiptNumber,
+        confirmed: '1',
+      }),
     })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
