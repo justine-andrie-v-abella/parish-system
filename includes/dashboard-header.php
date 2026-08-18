@@ -35,6 +35,27 @@ $hasSidebar = in_array($_SESSION['role'] ?? '', $sidebarRoles, true);
 .dp-tab-panels{ position:relative; }
 .dp-tab-panel{ display:none; }
 .dp-tab-panel.active{ display:block; }
+.reject-modal-overlay{
+  position:fixed; inset:0; background:rgba(11,20,36,0.55); z-index:1000;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+  opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.reject-modal-overlay.open{ opacity:1; pointer-events:auto; }
+.reject-modal-box{ background:var(--cream,#f4ede0); border-radius:20px; border:1px solid var(--line,#ddd); width:380px; max-width:100%; padding:24px; }
+.reject-modal-box h3{ font-size:18px; margin-bottom:12px; }
+.reject-error{ font-size:12px; color:#A2432F; margin-top:6px; display:none; }
+.reject-error.show{ display:block; }
+
+.qmodal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
+.qmodal-slot-grid{ display:grid; grid-template-columns: repeat(4,1fr); gap:8px; margin-top:10px; }
+.qmodal-slot-btn{ border:1px solid var(--line,#ddd); background: var(--white,#fff); border-radius:10px; padding:9px 4px; font-size:12px; color: var(--navy,#16223F); text-align:center; }
+.qmodal-slot-btn:hover:not(:disabled){ border-color: var(--gold,#C6A15B); background: var(--cream-deep,#f4ede0); }
+.qmodal-slot-btn.selected{ background: var(--navy,#16223F); color:#fff; border-color: var(--navy,#16223F); }
+.qmodal-slot-btn:disabled{ opacity:0.4; text-decoration: line-through; cursor:not-allowed; }
+.qmodal-slot-empty{ font-size:12.5px; color:var(--ink-soft,#7a7264); grid-column: 1/-1; }
+
+.cash-panel{ display:none; }
+.cash-panel.show{ display:block; }
 </style>
 
 <script>
@@ -116,6 +137,39 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
   </div>
 </div>
+
+<div class="reject-modal-overlay" id="rescheduleActionModal">
+  <div class="reject-modal-box" style="width:420px;">
+    <h3 id="raService">Reschedule</h3>
+    <p id="raCurrent" style="font-size:13px; color:var(--ink-soft); margin-bottom:6px;"></p>
+    <p id="raProposed" style="font-size:13.5px; font-weight:600; color:var(--navy); margin-bottom:14px;"></p>
+
+    <p id="raWaiting" class="upcoming-empty" style="display:none;"></p>
+
+    <div id="raActions" style="display:none;">
+      <div class="qmodal-actions" style="justify-content:flex-start; margin-top:0;">
+        <button type="button" class="btn btn-gold btn-sm" id="raAccept">Confirm This Date</button>
+        <button type="button" class="btn btn-outline btn-sm" id="raCounterToggle">Suggest Different Date</button>
+      </div>
+
+      <div id="raCounterPanel" class="cash-panel" style="margin-top:14px;">
+        <label style="display:block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px;">New Date</label>
+        <input type="date" id="raCounterDate" min="<?php echo date('Y-m-d'); ?>" style="width:100%; border:1px solid var(--line); border-radius:12px; padding:10px 13px;">
+        <div class="qmodal-slot-grid" id="raCounterSlots"><div class="qmodal-slot-empty">Choose a date to see open times.</div></div>
+        <div class="qmodal-actions">
+          <button type="button" class="btn btn-gold btn-sm" id="raCounterSubmit">Send Suggested Date</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="reject-error" id="raError"></p>
+    <div class="qmodal-actions">
+      <button type="button" class="btn btn-outline btn-sm" id="raClose">Close</button>
+    </div>
+  </div>
+</div>
+<script>var PMS_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';</script>
+<script src="<?php echo $hasSidebar ? '' : ''; ?>assets/js/notifications.js"></script>
 
 <div class="dash-shell">
   <?php if ($hasSidebar): ?>
