@@ -1,4 +1,5 @@
 <?php
+// C:\xampp\htdocs\parish-system\ajax\reschedule-request.php
 require_once '../includes/config.php';
 require_role(['secretary', 'priest']);
 require_once '../includes/db.php';
@@ -41,11 +42,16 @@ try {
     $stmt = $pdo->prepare('SELECT * FROM appointments WHERE id = ? FOR UPDATE');
     $stmt->execute([$id]);
     $appt = $stmt->fetch();
-
     if (!$appt) {
         $pdo->rollBack();
         http_response_code(404);
         echo json_encode(['error' => 'Request not found.']);
+        exit;
+    }
+    if ($appt['reschedule_status'] === 'pending') {
+        $pdo->rollBack();
+        http_response_code(409);
+        echo json_encode(['error' => 'This request already has a pending reschedule proposal awaiting response.']);
         exit;
     }
     if (in_array($appt['status'], ['cancelled', 'rejected', 'completed'], true)) {
@@ -67,17 +73,17 @@ try {
     $oldDate = $appt['appointment_date'];
 
     $update = $pdo->prepare(
-        "UPDATE appointments SET appointment_date = ?, appointment_time = ?, handled_by = ?, handled_at = NOW() WHERE id = ?"
+        "UPDATE appointments SET proposed_date = ?, proposed_time = ?, reschedule_status = 'pending', proposed_by = ?, handled_by = ?, handled_at = NOW() WHERE id = ?"
     );
-    $update->execute([$date, $time, $secretaryId, $id]);
+    $update->execute([$date, $time, $secretaryId, $secretaryId, $id]);
 
     $serviceNames = array_column($services, 'name', 'key');
     $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key']);
-    $message = "Your {$svcLabel} request was moved from " . date('F j, Y', strtotime($oldDate))
-        . ' to ' . date('F j, Y', strtotime($date)) . ' at ' . format_slot_label($time) . '.';
+    $message = "The office proposed moving your {$svcLabel} request from " . date('F j, Y', strtotime($oldDate))
+        . ' to ' . date('F j, Y', strtotime($date)) . ' at ' . format_slot_label($time) . '. Tap to confirm or suggest another date.';
 
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)');
-    $notify->execute([$appt['user_id'], $message, 'schedule']);
+    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type, appointment_id) VALUES (?, ?, ?, ?)');
+    $notify->execute([$appt['user_id'], $message, 'schedule', $id]);
 
     $pdo->commit();
 
