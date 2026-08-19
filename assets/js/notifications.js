@@ -1,3 +1,4 @@
+// C:\xampp\htdocs\parish-system\assets\js\notifications.js
 document.addEventListener('DOMContentLoaded', function () {
   var modal = document.getElementById('rescheduleActionModal');
   if (!modal) return;
@@ -110,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (apptId) openReschedule(apptId);
-  });
+  }, true);
 
   closeBtn.addEventListener('click', function () { modal.classList.remove('open'); });
   modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('open'); });
