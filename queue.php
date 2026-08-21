@@ -6,6 +6,7 @@ require_once 'includes/calendar.php';
 
 $sid = (int) $_SESSION['user_id'];
 $serviceNames = array_column($services, 'name', 'key');
+$today = date('Y-m-d');
 
 // ---------------- Notifications (header dropdown) ----------------
 $notifStmt = $pdo->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 5');
@@ -38,7 +39,7 @@ $year  = isset($_GET['year'])  ? (int) $_GET['year'] : (int) date('Y');
 $calendarPanelHtml = render_calendar_fragment($pdo, $month, $year);
 
 // ---------------- Filter + search ----------------
-$allowedFilters = ['all', 'pending', 'confirmed', 'completed', 'cancelled', 'rejected'];
+$allowedFilters = ['all', 'pending', 'confirmed', 'completed', 'no_show', 'cancelled', 'rejected'];
 $filter = in_array($_GET['status'] ?? 'pending', $allowedFilters, true) ? ($_GET['status'] ?? 'pending') : 'pending';
 $q = trim($_GET['q'] ?? '');
 
@@ -85,19 +86,27 @@ require_once 'includes/dashboard-header.php';
 .status-pill.confirmed, .status-pill.approved{ background:#EAEEF9; color:#33488A; }
 .status-pill.completed{ background:#EAF5EC; color:#2F6B45; }
 .status-pill.cancelled, .status-pill.rejected{ background:#FBEAE7; color:#A2432F; }
+.status-pill.no_show{ background:#EEECE7; color:#6B6459; }
 
 .pm-chip{ font-family: var(--font-mono); font-size:10px; letter-spacing:0.5px; text-transform:uppercase; padding:3px 9px; border-radius:999px; }
 .pm-chip.unpaid{ background:#FBF3DE; color:#9C7C1E; }
 .pm-chip.paid{ background:#EAF5EC; color:#2F6B45; }
 .pm-chip.rejected{ background:#FBEAE7; color:#A2432F; }
 
+.overdue-tag{ font-family: var(--font-mono); font-size:10px; letter-spacing:0.5px; text-transform:uppercase; color:#A2432F; margin-top:4px; }
+
 .row-actions{ display:flex; gap:6px; flex-wrap:wrap; }
 .row-actions button{ font-family: var(--font-mono); font-size:10.5px; letter-spacing:0.5px; text-transform:uppercase; padding:6px 11px; border-radius:999px; border:1px solid var(--line); background:var(--white); color:var(--navy); }
+.row-actions button:disabled{ opacity:0.45; cursor:not-allowed; }
 .row-actions .approve-btn{ border-color: var(--gold); }
-.row-actions .approve-btn:hover{ background: var(--cream-deep); }
+.row-actions .approve-btn:hover:not(:disabled){ background: var(--cream-deep); }
 .row-actions .reject-btn{ border-color:#E9C8C0; color:#A2432F; }
 .row-actions .reject-btn:hover{ background:#FBEAE7; }
 .row-actions .docs-btn:hover, .row-actions .reschedule-btn:hover{ background: var(--cream-deep); }
+.row-actions .complete-btn{ border-color:#9CCBA9; color:#2F6B45; }
+.row-actions .complete-btn:hover{ background:#EAF5EC; }
+.row-actions .noshow-btn{ border-color:#C9BFAE; color:#6B6459; }
+.row-actions .noshow-btn:hover{ background:#F2EEE6; }
 
 .qmodal-overlay{ position:fixed; inset:0; background:rgba(11,20,36,0.55); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .2s; }
 .qmodal-overlay.open{ opacity:1; pointer-events:auto; }
@@ -135,7 +144,7 @@ require_once 'includes/dashboard-header.php';
 </div>
 
 <div class="filter-row">
-  <?php foreach (['pending' => 'Pending', 'confirmed' => 'Confirmed', 'completed' => 'Completed', 'cancelled' => 'Cancelled', 'rejected' => 'Rejected', 'all' => 'All'] as $key => $label): ?>
+  <?php foreach (['pending' => 'Pending', 'confirmed' => 'Confirmed', 'completed' => 'Completed', 'no_show' => 'No-show', 'cancelled' => 'Cancelled', 'rejected' => 'Rejected', 'all' => 'All'] as $key => $label): ?>
     <a href="?status=<?php echo $key; ?>&q=<?php echo urlencode($q); ?>" class="filter-chip<?php echo $filter === $key ? ' active' : ''; ?>"><?php echo $label; ?></a>
   <?php endforeach; ?>
 </div>
@@ -149,34 +158,56 @@ require_once 'includes/dashboard-header.php';
         <tr><th>Request</th><th>Parishioner</th><th>Service</th><th>Date</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
       </thead>
       <tbody>
-        <?php foreach ($rows as $r): ?>
+        <?php foreach ($rows as $r):
+          // A request is "overdue" if its date has passed and it's still
+          // sitting in a state that assumed a future date (pending / confirmed).
+          $isOverdue = $r['appointment_date'] < $today
+              && in_array($r['status'], ['pending', 'confirmed', 'approved'], true);
+        ?>
           <tr>
             <td>#<?php echo $r['id']; ?></td>
             <td><?php echo htmlspecialchars($r['full_name']); ?></td>
             <td class="svc-cell"><?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?></td>
-            <td><?php echo date('M j, Y', strtotime($r['appointment_date'])); ?><?php echo $r['appointment_time'] ? ' · ' . date('g:i A', strtotime($r['appointment_time'])) : ''; ?></td>
+            <td>
+              <?php echo date('M j, Y', strtotime($r['appointment_date'])); ?><?php echo $r['appointment_time'] ? ' · ' . date('g:i A', strtotime($r['appointment_time'])) : ''; ?>
+              <?php if ($isOverdue): ?>
+                <div class="overdue-tag">Overdue</div>
+              <?php endif; ?>
+            </td>
             <td><span class="pm-chip <?php echo $r['payment_status']; ?>"><?php echo ucfirst($r['payment_status']); ?></span></td>
             <td>
-              <span class="status-pill <?php echo $r['status']; ?>"><?php echo ucfirst($r['status']); ?></span>
-              <?php if ($r['status'] === 'rejected' && $r['status_reason']): ?>
+              <span class="status-pill <?php echo $r['status']; ?>"><?php echo $r['status'] === 'no_show' ? 'No-show' : ucfirst($r['status']); ?></span>
+              <?php if (in_array($r['status'], ['rejected', 'no_show'], true) && $r['status_reason']): ?>
                 <div style="font-size:11px; color:var(--ink-soft); margin-top:4px; max-width:160px;"><?php echo htmlspecialchars($r['status_reason']); ?></div>
               <?php endif; ?>
             </td>
             <td>
               <div class="row-actions">
                 <?php if ($r['status'] === 'pending'): ?>
-                  <button type="button" class="approve-btn" data-approve-id="<?php echo $r['id']; ?>">Approve</button>
+                  <?php if ($isOverdue): ?>
+                    <button type="button" class="approve-btn" disabled title="Date has passed — reschedule before approving">Approve</button>
+                  <?php else: ?>
+                    <button type="button" class="approve-btn" data-approve-id="<?php echo $r['id']; ?>">Approve</button>
+                  <?php endif; ?>
                   <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>" data-reject-scope="request">Reject</button>
                   <button type="button" class="docs-btn" data-docs-id="<?php echo $r['id']; ?>">Request Docs</button>
                   <button type="button" class="reschedule-btn"
                     data-reschedule-id="<?php echo $r['id']; ?>"
                     data-current-date="<?php echo htmlspecialchars($r['appointment_date']); ?>">Reschedule</button>
                 <?php elseif (in_array($r['status'], ['confirmed', 'approved'], true)): ?>
-                  <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>" data-reject-scope="request">Cancel</button>
-                  <button type="button" class="docs-btn" data-docs-id="<?php echo $r['id']; ?>">Request Docs</button>
-                  <button type="button" class="reschedule-btn"
-                    data-reschedule-id="<?php echo $r['id']; ?>"
-                    data-current-date="<?php echo htmlspecialchars($r['appointment_date']); ?>">Reschedule</button>
+                  <?php if ($isOverdue): ?>
+                    <button type="button" class="complete-btn" data-complete-id="<?php echo $r['id']; ?>">Mark Completed</button>
+                    <button type="button" class="noshow-btn" data-noshow-id="<?php echo $r['id']; ?>">Mark No-show</button>
+                    <button type="button" class="reschedule-btn"
+                      data-reschedule-id="<?php echo $r['id']; ?>"
+                      data-current-date="<?php echo htmlspecialchars($r['appointment_date']); ?>">Reschedule</button>
+                  <?php else: ?>
+                    <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>" data-reject-scope="request">Cancel</button>
+                    <button type="button" class="docs-btn" data-docs-id="<?php echo $r['id']; ?>">Request Docs</button>
+                    <button type="button" class="reschedule-btn"
+                      data-reschedule-id="<?php echo $r['id']; ?>"
+                      data-current-date="<?php echo htmlspecialchars($r['appointment_date']); ?>">Reschedule</button>
+                  <?php endif; ?>
                 <?php else: ?>
                   <span style="font-size:11px; color:var(--ink-soft);">—</span>
                 <?php endif; ?>
