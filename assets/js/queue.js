@@ -31,6 +31,54 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // ---------------- Mark Completed ----------------
+  document.querySelectorAll('[data-complete-id]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!confirm('Mark this appointment as completed? This confirms the service was delivered.')) return;
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      postForm('ajax/mark-completed.php', { id: btn.dataset.completeId })
+        .then(function (res) {
+          if (!res.ok || res.data.error) {
+            alert(res.data.error || 'Something went wrong.');
+            btn.disabled = false;
+            btn.textContent = 'Mark Completed';
+            return;
+          }
+          window.location.reload();
+        })
+        .catch(function () {
+          alert('Network error. Please try again.');
+          btn.disabled = false;
+          btn.textContent = 'Mark Completed';
+        });
+    });
+  });
+
+  // ---------------- Mark No-show ----------------
+  document.querySelectorAll('[data-noshow-id]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!confirm('Mark this appointment as a no-show? The parishioner will be notified.')) return;
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      postForm('ajax/mark-noshow.php', { id: btn.dataset.noshowId })
+        .then(function (res) {
+          if (!res.ok || res.data.error) {
+            alert(res.data.error || 'Something went wrong.');
+            btn.disabled = false;
+            btn.textContent = 'Mark No-show';
+            return;
+          }
+          window.location.reload();
+        })
+        .catch(function () {
+          alert('Network error. Please try again.');
+          btn.disabled = false;
+          btn.textContent = 'Mark No-show';
+        });
+    });
+  });
+
   // ---------------- Reject ----------------
   var rejectModal = document.getElementById('rejectModal');
   var rejectReason = document.getElementById('rejectReason');
