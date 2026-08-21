@@ -1,5 +1,5 @@
 <?php
-// C:\xampp\htdocs\parish-system\ajax\approve-request.php
+// C:\xampp\htdocs\parish-system\ajax\mark-completed.php
 require_once '../includes/config.php';
 require_role(['secretary', 'priest']);
 require_once '../includes/db.php';
@@ -20,7 +20,7 @@ if ($id <= 0) {
     exit;
 }
 
-$secretaryId = (int) $_SESSION['user_id'];
+$staffId = (int) $_SESSION['user_id'];
 
 try {
     $pdo->beginTransaction();
@@ -35,39 +35,38 @@ try {
         echo json_encode(['error' => 'Request not found.']);
         exit;
     }
-    if ($appt['status'] !== 'pending') {
+    if (!in_array($appt['status'], ['confirmed', 'approved'], true)) {
         $pdo->rollBack();
         http_response_code(409);
-        echo json_encode(['error' => 'This request is already ' . $appt['status'] . '.']);
+        echo json_encode(['error' => 'Only confirmed appointments can be marked completed.']);
         exit;
     }
-    // A pending request whose date has already passed can't be confirmed
-    // as-is — the slot no longer exists. Staff must reschedule it to a
-    // valid future date first, then approve.
-    if ($appt['appointment_date'] < date('Y-m-d')) {
+    // Don't let staff mark a future-dated appointment completed early —
+    // the service hasn't happened yet.
+    if ($appt['appointment_date'] > date('Y-m-d')) {
         $pdo->rollBack();
         http_response_code(409);
-        echo json_encode(['error' => 'This request\'s date has already passed. Reschedule it to a new date before approving.']);
+        echo json_encode(['error' => 'This appointment date hasn\'t happened yet.']);
         exit;
     }
 
     $update = $pdo->prepare(
-        "UPDATE appointments SET status = 'confirmed', status_reason = NULL, handled_by = ?, handled_at = NOW() WHERE id = ?"
+        "UPDATE appointments SET status = 'completed', status_reason = NULL, handled_by = ?, handled_at = NOW() WHERE id = ?"
     );
-    $update->execute([$secretaryId, $id]);
+    $update->execute([$staffId, $id]);
 
     $serviceNames = array_column($services, 'name', 'key');
     $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key']);
-    $message = "Your {$svcLabel} request for " . date('F j, Y', strtotime($appt['appointment_date']))
-        . ' has been approved and confirmed by the parish office.';
+    $message = "Your {$svcLabel} on " . date('F j, Y', strtotime($appt['appointment_date']))
+        . ' has been marked as completed. Thank you.';
 
     $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)');
-    $notify->execute([$appt['user_id'], $message, 'approved']);
+    $notify->execute([$appt['user_id'], $message, 'completed']);
 
     $pdo->commit();
 
-    log_activity($pdo, $secretaryId, 'appointment_approved',
-        $_SESSION['full_name'] . " approved {$svcLabel} request #{$id}.",
+    log_activity($pdo, $staffId, 'appointment_completed',
+        $_SESSION['full_name'] . " marked {$svcLabel} request #{$id} as completed.",
         'appointment', $id);
 
     echo json_encode(['success' => true]);
@@ -76,5 +75,5 @@ try {
         $pdo->rollBack();
     }
     http_response_code(500);
-    echo json_encode(['error' => 'Something went wrong approving this request. Please try again.']);
+    echo json_encode(['error' => 'Something went wrong marking this request completed. Please try again.']);
 }
