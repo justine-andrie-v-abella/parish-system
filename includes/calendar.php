@@ -36,12 +36,15 @@ function render_calendar_fragment(PDO $pdo, int $month, int $year): string {
     $nextMonth = $month === 12 ? 1 : $month + 1;
     $nextYear  = $month === 12 ? $year + 1 : $year;
 
+    // no_show is excluded here the same way cancelled/rejected are: a slot
+    // that ended up a no-show shouldn't keep showing as "Reserved" once the
+    // date is in the past, and it never occupies capacity going forward.
     $aggStmt = $pdo->prepare(
         "SELECT appointment_date,
                 COUNT(*) AS total,
                 SUM(CASE WHEN status IN ('confirmed','approved','completed') THEN 1 ELSE 0 END) AS confirmed_count
          FROM appointments
-         WHERE appointment_date BETWEEN ? AND ? AND status NOT IN ('cancelled','rejected')
+         WHERE appointment_date BETWEEN ? AND ? AND status NOT IN ('cancelled','rejected','no_show')
          GROUP BY appointment_date"
     );
     $aggStmt->execute([$firstOfMonth, $lastOfMonth]);
