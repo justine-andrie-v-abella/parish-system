@@ -1,4 +1,3 @@
-//assets\js\intentions.js
 document.addEventListener('DOMContentLoaded', function () {
   // Requirements accordion on each card
   document.querySelectorAll('[data-req-toggle]').forEach(function (btn) {
@@ -20,6 +19,9 @@ document.addEventListener('DOMContentLoaded', function () {
   var stepDot1 = document.getElementById('stepDot1');
   var stepDot2 = document.getElementById('stepDot2');
   var dateInput = document.getElementById('apptDate');
+  var apptDateGroup = document.getElementById('apptDateGroup');
+  var dateOfDeathGroup = document.getElementById('dateOfDeathGroup');
+  var dateOfDeathInput = document.getElementById('dateOfDeath');
   var slotGrid = document.getElementById('slotGrid');
   var timeInput = document.getElementById('apptTimeInput');
   var notesInput = document.getElementById('apptNotes');
@@ -38,6 +40,16 @@ document.addEventListener('DOMContentLoaded', function () {
   var formSuccess = document.getElementById('formSuccess');
   var form = document.getElementById('bookingForm');
   var submitBtn = document.getElementById('modalSubmit');
+
+  // Services whose schedule is 'conditional' (date derived from another
+  // event, e.g. Burial Mass = date of death + N days). Keep this in sync
+  // with whichever service_key(s) you give a 'conditional' rule in Catalog.
+  var CONDITIONAL_SERVICE_KEYS = ['burial'];
+
+  // True when the currently-loaded slot response doesn't need a specific
+  // time picked (by_arrangement / always_available) — set only from the
+  // actual server response type, never guessed from rendered text.
+  var noSlotRequired = false;
 
   function formatPeso(n) {
     return '₱' + Number(n).toLocaleString();
@@ -73,7 +85,24 @@ document.addEventListener('DOMContentLoaded', function () {
     dateInput.value = '';
     timeInput.value = '';
     notesInput.value = '';
+    noSlotRequired = false;
     slotGrid.innerHTML = '<p class="slot-empty">Choose a date to see open times.</p>';
+
+    var isConditionalService = CONDITIONAL_SERVICE_KEYS.indexOf(serviceKey) !== -1;
+
+    if (dateOfDeathGroup) {
+      dateOfDeathGroup.style.display = isConditionalService ? 'block' : 'none';
+      if (dateOfDeathInput) dateOfDeathInput.value = '';
+    }
+
+    // For conditional services the appointment date is computed from the
+    // trigger date (e.g. date of death), not chosen directly — hide the
+    // Preferred Date field entirely so it can't be touched and accidentally
+    // reset the selected slot via its own 'change' listener.
+    if (apptDateGroup) {
+      apptDateGroup.style.display = isConditionalService ? 'none' : 'block';
+    }
+    dateInput.required = !isConditionalService;
 
     pmCash.checked = true;
     togglePaymentPanels();
@@ -105,57 +134,126 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.target === modal) closeModal();
   });
 
+  function renderSlots(data) {
+    noSlotRequired = false;
+    timeInput.value = '';
+
+    if (data.error) {
+      slotGrid.innerHTML = '<p class="slot-empty">' + data.error + '</p>';
+      return;
+    }
+
+    // Service has no fixed schedule — staff and requester coordinate a date.
+    if (data.by_arrangement) {
+      noSlotRequired = true;
+      slotGrid.innerHTML = '<p class="slot-empty">' + data.note + '</p>';
+      return;
+    }
+
+    // Service has no restriction at all — any date the parishioner picked is fine.
+    if (data.always_available) {
+      noSlotRequired = true;
+      slotGrid.innerHTML = '<p class="slot-empty">' + data.message + '</p>';
+      return;
+    }
+
+    // Date is derived from another event (e.g. date of death); nothing to
+    // pick here besides confirming the computed slot.
+    if (data.requires_trigger_date) {
+      slotGrid.innerHTML = '<p class="slot-empty">' + data.message + '</p>';
+      return;
+    }
+
+    if (data.closed || !data.slots || !data.slots.length) {
+      slotGrid.innerHTML = '<p class="slot-empty">This service isn\'t offered on that date. Please pick a different day.</p>';
+      return;
+    }
+
+    slotGrid.innerHTML = '';
+    data.slots.forEach(function (slot) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'slot-btn';
+      b.textContent = slot.label;
+      b.disabled = !slot.available;
+      if (slot.available) {
+        b.addEventListener('click', function () {
+          slotGrid.querySelectorAll('.slot-btn').forEach(function (s) { s.classList.remove('selected'); });
+          b.classList.add('selected');
+          timeInput.value = slot.time;
+          // 'conditional' rules compute the real appointment date server-side;
+          // reflect it back into the date field so the submitted record is correct.
+          if (data.computed_date) {
+            dateInput.value = data.computed_date;
+          }
+        });
+      }
+      slotGrid.appendChild(b);
+    });
+  }
+
+  function fetchSlots() {
+    var serviceKey = serviceKeyInput.value;
+    var date = dateInput.value;
+    var isConditional = CONDITIONAL_SERVICE_KEYS.indexOf(serviceKey) !== -1;
+
+    if (isConditional) {
+      if (!dateOfDeathInput || !dateOfDeathInput.value) {
+        slotGrid.innerHTML = '<p class="slot-empty">Please enter the date of death first.</p>';
+        return;
+      }
+    } else if (!date) {
+      return;
+    }
+
+    slotGrid.innerHTML = '<p class="slot-empty">Loading available times&hellip;</p>';
+
+    var url = 'ajax/get-slots.php?service_key=' + encodeURIComponent(serviceKey);
+    url += '&date=' + encodeURIComponent(isConditional ? (date || dateOfDeathInput.value) : date);
+    if (isConditional && dateOfDeathInput) {
+      url += '&date_of_death=' + encodeURIComponent(dateOfDeathInput.value);
+    }
+
+    fetch(url)
+      .then(function (r) { return r.json(); })
+      .then(renderSlots)
+      .catch(function () {
+        slotGrid.innerHTML = '<p class="slot-empty">Couldn\'t load times. Please try again.</p>';
+      });
+  }
+
   // ---------------- Step 1: date/time slots ----------------
   dateInput.addEventListener('change', function () {
     timeInput.value = '';
     formErrorStep1.classList.remove('show');
-    var date = dateInput.value;
-    if (!date) return;
-
-    slotGrid.innerHTML = '<p class="slot-empty">Loading available times&hellip;</p>';
-
-    fetch('ajax/get-slots.php?date=' + encodeURIComponent(date))
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (data.error) {
-          slotGrid.innerHTML = '<p class="slot-empty">' + data.error + '</p>';
-          return;
-        }
-        if (data.closed || !data.slots.length) {
-          slotGrid.innerHTML = '<p class="slot-empty">The office is closed that day. Please pick a weekday or Saturday.</p>';
-          return;
-        }
-
-        slotGrid.innerHTML = '';
-        data.slots.forEach(function (slot) {
-          var b = document.createElement('button');
-          b.type = 'button';
-          b.className = 'slot-btn';
-          b.textContent = slot.label;
-          b.disabled = !slot.available;
-          if (slot.available) {
-            b.addEventListener('click', function () {
-              slotGrid.querySelectorAll('.slot-btn').forEach(function (s) { s.classList.remove('selected'); });
-              b.classList.add('selected');
-              timeInput.value = slot.time;
-            });
-          }
-          slotGrid.appendChild(b);
-        });
-      })
-      .catch(function () {
-        slotGrid.innerHTML = '<p class="slot-empty">Couldn\'t load times. Please try again.</p>';
-      });
+    fetchSlots();
   });
+
+  if (dateOfDeathInput) {
+    dateOfDeathInput.addEventListener('change', function () {
+      timeInput.value = '';
+      formErrorStep1.classList.remove('show');
+      fetchSlots();
+    });
+  }
 
   goToPaymentBtn.addEventListener('click', function () {
     formErrorStep1.classList.remove('show');
-    if (!dateInput.value) {
+    var isConditional = CONDITIONAL_SERVICE_KEYS.indexOf(serviceKeyInput.value) !== -1;
+
+    if (isConditional) {
+      if (!dateOfDeathInput || !dateOfDeathInput.value) {
+        formErrorStep1.textContent = 'Please enter the date of death.';
+        formErrorStep1.classList.add('show');
+        return;
+      }
+    } else if (!dateInput.value) {
       formErrorStep1.textContent = 'Please choose a date.';
       formErrorStep1.classList.add('show');
       return;
     }
-    if (!timeInput.value) {
+
+    if (!timeInput.value && !noSlotRequired) {
       formErrorStep1.textContent = 'Please choose an available time slot.';
       formErrorStep1.classList.add('show');
       return;
@@ -191,6 +289,9 @@ document.addEventListener('DOMContentLoaded', function () {
     formData.append('appointment_time', timeInput.value);
     formData.append('notes', notesInput.value);
     formData.append('payment_method', pmGcash.checked ? 'gcash' : 'cash');
+    if (dateOfDeathInput && dateOfDeathInput.value) {
+      formData.append('date_of_death', dateOfDeathInput.value);
+    }
 
     fetch('ajax/book-appointment.php', {
       method: 'POST',
