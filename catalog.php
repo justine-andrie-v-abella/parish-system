@@ -38,8 +38,12 @@ $calendarPanelHtml = render_calendar_fragment($pdo, $month, $year);
 // ---------------- Check the catalog migration has been applied ----------------
 $catalogReady = $pdo->query("SELECT to_regclass('public.services')")->fetchColumn() !== null;
 
+// ---------------- Check the schedules migration has been applied ----------------
+$schedulesReady = $pdo->query("SELECT to_regclass('public.service_schedules')")->fetchColumn() !== null;
+
 $catalogRows = [];
 $catalogRequirements = [];
+$catalogSchedules = [];
 if ($catalogReady) {
     $catalogRows = $pdo->query("SELECT * FROM services ORDER BY sort_order ASC, id ASC")->fetchAll();
     $reqRows = $pdo->query("SELECT * FROM service_requirements ORDER BY service_key, sort_order ASC, id ASC")->fetchAll();
@@ -49,6 +53,13 @@ if ($catalogReady) {
     // Count appointments per service (to warn before delete)
     $countRows = $pdo->query("SELECT service_key, COUNT(*) c FROM appointments GROUP BY service_key")->fetchAll();
     $usageCounts = array_column($countRows, 'c', 'service_key');
+
+    if ($schedulesReady) {
+        $schedRows = $pdo->query("SELECT * FROM service_schedules WHERE is_active = true ORDER BY service_key, sort_order ASC, id ASC")->fetchAll();
+        foreach ($schedRows as $r) {
+            $catalogSchedules[$r['service_key']][] = $r;
+        }
+    }
 }
 
 $page_title = 'Service Catalog — ' . $parish['name'];
@@ -62,6 +73,35 @@ $icons = [
     'candle' => '<path d="M12 2c1 2-1 2.5-1 4a1 1 0 0 0 2 0c0-1.5-2-2-1-4Z"/><rect x="9" y="8" width="6" height="13" rx="1"/><path d="M9 12h6"/>',
     'vessel' => '<path d="M8 3h8M12 3v4"/><path d="M6 9c0-1.1 2.7-2 6-2s6 .9 6 2-2.7 8-6 10c-3.3-2-6-8.9-6-10Z"/>',
 ];
+
+$dowLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** Turns a service's schedule rows into a short human-readable summary for the card. */
+function summarize_schedule(array $rules, array $dowLabels): string {
+    if (!$rules) return 'No schedule set';
+    $parts = [];
+    foreach ($rules as $r) {
+        switch ($r['rule_type']) {
+            case 'weekly':
+                $parts[] = $dowLabels[(int)$r['day_of_week']] . ' ' . date('g:i A', strtotime($r['start_time']));
+                break;
+            case 'nth_weekday':
+                $occ = str_replace(',', ' & ', $r['occurrences']);
+                $parts[] = ucwords($occ) . ' ' . $dowLabels[(int)$r['day_of_week']] . ' ' . date('g:i A', strtotime($r['start_time']));
+                break;
+            case 'conditional':
+                $parts[] = '+' . $r['offset_days'] . 'd after ' . str_replace('_', ' ', $r['trigger_event']) . ', ' . date('g:i A', strtotime($r['start_time']));
+                break;
+            case 'by_arrangement':
+                $parts[] = 'By arrangement';
+                break;
+            case 'always_available':
+                $parts[] = 'Always available';
+                break;
+        }
+    }
+    return implode(' · ', array_unique($parts));
+}
 ?>
 
 <style>
@@ -72,6 +112,7 @@ $icons = [
 .catalog-card h3{ font-size:17px; margin:12px 0 4px; }
 .catalog-card .desc{ font-size:12.5px; color:var(--ink-soft); min-height:36px; }
 .catalog-card .fee{ font-family:var(--font-mono); font-size:13px; color:var(--brown); margin:10px 0; }
+.catalog-card .schedule-summary{ font-size:11.5px; color:var(--ink-soft); background:var(--cream-deep); border-radius:8px; padding:6px 10px; margin-bottom:8px; }
 .catalog-card .cc-actions{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
 .catalog-card .cc-actions button{ font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.5px; text-transform:uppercase; padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:var(--white); color:var(--navy); }
 .catalog-card .cc-actions .danger{ border-color:#E9C8C0; color:#A2432F; }
@@ -79,7 +120,7 @@ $icons = [
 
 .cmodal-overlay{ position:fixed; inset:0; background:rgba(11,20,36,0.55); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .2s; }
 .cmodal-overlay.open{ opacity:1; pointer-events:auto; }
-.cmodal-box{ background:var(--cream); border-radius:20px; border:1px solid var(--line); width:480px; max-width:100%; padding:26px; max-height:88vh; overflow-y:auto; }
+.cmodal-box{ background:var(--cream); border-radius:20px; border:1px solid var(--line); width:560px; max-width:100%; padding:26px; max-height:88vh; overflow-y:auto; }
 .cmodal-box h3{ font-size:19px; margin-bottom:16px; }
 .cmodal-box label{ display:block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-soft); margin-bottom:6px; margin-top:14px; }
 .cmodal-box input, .cmodal-box select, .cmodal-box textarea{ width:100%; border:1px solid var(--line); border-radius:12px; padding:10px 13px; font-family:inherit; font-size:13.5px; background:var(--white); }
@@ -93,6 +134,27 @@ $icons = [
 .cmodal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
 .cmodal-error{ font-size:12px; color:#A2432F; margin-top:8px; display:none; }
 .cmodal-error.show{ display:block; }
+
+/* ---- Schedule rule builder ---- */
+.sched-section{ border-top:1px dashed var(--line); margin-top:22px; padding-top:16px; }
+.sched-section > label{ margin-top:0; }
+.sched-rule{ border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px; background:var(--white); position:relative; }
+.sched-rule .sched-remove{ position:absolute; top:10px; right:10px; background:none; border:none; color:var(--ink-soft); font-size:16px; cursor:pointer; line-height:1; padding:2px 6px; }
+.sched-rule label{ margin-top:10px; }
+.sched-rule label:first-of-type{ margin-top:0; }
+.sched-field{ display:none; }
+.sched-field.show{ display:block; }
+.dow-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.dow-choice{ position:relative; }
+.dow-choice input{ position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
+.dow-choice label{ display:flex; align-items:center; justify-content:center; border:1px solid var(--line); border-radius:8px; padding:7px 0; margin:0; cursor:pointer; font-size:11px; text-transform:none; letter-spacing:0; }
+.dow-choice input:checked + label{ border-color:var(--gold); background:var(--cream-deep); font-weight:600; }
+.occ-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:4px; }
+.occ-choice{ position:relative; }
+.occ-choice input{ position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
+.occ-choice label{ display:flex; align-items:center; justify-content:center; border:1px solid var(--line); border-radius:8px; padding:7px 0; margin:0; cursor:pointer; font-size:10.5px; text-transform:none; letter-spacing:0; }
+.occ-choice input:checked + label{ border-color:var(--gold); background:var(--cream-deep); font-weight:600; }
+.sched-add-btn{ font-family:var(--font-mono); font-size:11px; letter-spacing:0.5px; text-transform:uppercase; padding:8px 14px; border-radius:999px; border:1px dashed var(--line); background:var(--white); color:var(--navy); cursor:pointer; margin-top:4px; }
 </style>
 
 <div class="page-head">
@@ -111,6 +173,17 @@ $icons = [
   </div>
 <?php else: ?>
 
+  <?php if (!$schedulesReady): ?>
+    <div class="panel" style="margin-bottom:28px; border-color: var(--gold);">
+      <h3>Schedule migration not applied yet</h3>
+      <p style="font-size:13.5px; color:var(--ink-soft);">
+        Import <code>database/migration_add_schedules.sql</code> to enable per-service schedule rules
+        (which days/weeks a service is offered). Until then, services can still be edited but the
+        Schedule section below is hidden and booking will not enforce any date pattern.
+      </p>
+    </div>
+  <?php endif; ?>
+
   <div style="margin-bottom:22px;">
     <button type="button" class="btn btn-gold btn-sm" id="addServiceBtn">+ Add New Service</button>
   </div>
@@ -118,6 +191,7 @@ $icons = [
   <div class="catalog-grid">
     <?php foreach ($catalogRows as $s):
         $reqLines = $catalogRequirements[$s['service_key']] ?? [];
+        $schedRules = $catalogSchedules[$s['service_key']] ?? [];
         $usage = $usageCounts[$s['service_key']] ?? 0;
     ?>
       <div class="catalog-card<?php echo is_true($s['is_active']) ? '' : ' inactive'; ?>">
@@ -127,6 +201,9 @@ $icons = [
         </div>
         <h3><?php echo htmlspecialchars($s['name']); ?></h3>
         <p class="desc"><?php echo htmlspecialchars($s['description']); ?></p>
+        <?php if ($schedulesReady): ?>
+          <div class="schedule-summary"><?php echo htmlspecialchars(summarize_schedule($schedRules, $dowLabels)); ?></div>
+        <?php endif; ?>
         <div class="fee">₱<?php echo number_format($s['fee']); ?> · <?php echo $usage; ?> request<?php echo $usage === 1 ? '' : 's'; ?> on file</div>
         <div class="cc-actions">
           <button type="button" class="edit-service-btn"
@@ -137,7 +214,19 @@ $icons = [
             data-desc="<?php echo htmlspecialchars($s['description']); ?>"
             data-fee="<?php echo $s['fee']; ?>"
             data-active="<?php echo $s['is_active']; ?>"
-            data-requirements="<?php echo htmlspecialchars(implode("\n", $reqLines)); ?>">Edit</button>
+            data-requirements="<?php echo htmlspecialchars(implode("\n", $reqLines)); ?>"
+            data-schedules="<?php echo htmlspecialchars(json_encode(array_map(function($r) {
+                return [
+                    'rule_type'     => $r['rule_type'],
+                    'day_of_week'   => $r['day_of_week'],
+                    'occurrences'   => $r['occurrences'],
+                    'trigger_event' => $r['trigger_event'],
+                    'offset_days'   => $r['offset_days'],
+                    'start_time'    => $r['start_time'] ? substr($r['start_time'], 0, 5) : null,
+                    'label'         => $r['label'],
+                    'note'          => $r['note'],
+                ];
+            }, $schedRules))); ?>">Edit</button>
           <button type="button" class="toggle-service-btn" data-id="<?php echo $s['id']; ?>" data-active="<?php echo $s['is_active']; ?>">
             <?php echo is_true($s['is_active']) ? 'Deactivate' : 'Activate'; ?>
           </button>
@@ -179,6 +268,14 @@ $icons = [
         <label for="svcRequirements">Requirements (one per line)</label>
         <textarea id="svcRequirements" placeholder="Valid ID&#10;Birth Certificate&#10;..."></textarea>
 
+        <?php if ($schedulesReady): ?>
+        <div class="sched-section">
+          <label>Schedule Rules <span style="text-transform:none;">— when is this service actually offered?</span></label>
+          <div id="schedRulesList"></div>
+          <button type="button" class="sched-add-btn" id="addScheduleRuleBtn">+ Add schedule rule</button>
+        </div>
+        <?php endif; ?>
+
         <p class="cmodal-error" id="serviceError"></p>
 
         <div class="cmodal-actions">
@@ -188,6 +285,70 @@ $icons = [
       </form>
     </div>
   </div>
+
+  <!-- Template for one schedule rule row, cloned by catalog.js -->
+  <template id="schedRuleTemplate">
+    <div class="sched-rule">
+      <button type="button" class="sched-remove" title="Remove this rule">&times;</button>
+
+      <label>Rule Type</label>
+      <select class="sr-type">
+        <option value="weekly">Every week, on specific day(s)</option>
+        <option value="nth_weekday">Specific week(s) of the month (e.g. 1st &amp; 3rd Saturday)</option>
+        <option value="conditional">Depends on another date (e.g. days after date of death)</option>
+        <option value="by_arrangement">By arrangement (staff &amp; requester agree on a date)</option>
+        <option value="always_available">Always available (no fixed schedule)</option>
+      </select>
+
+      <div class="sched-field sr-field-dow">
+        <label>Day of Week</label>
+        <div class="dow-grid">
+          <?php foreach (['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] as $i => $d): ?>
+            <div class="dow-choice">
+              <input type="radio" class="sr-dow" name="sr-dow-TEMPLATE" value="<?php echo $i; ?>" id="sr-dow-TEMPLATE-<?php echo $i; ?>">
+              <label for="sr-dow-TEMPLATE-<?php echo $i; ?>"><?php echo $d; ?></label>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+
+      <div class="sched-field sr-field-occ">
+        <label>Which occurrence(s) in the month</label>
+        <div class="occ-grid">
+          <?php foreach (['1'=>'1st','2'=>'2nd','3'=>'3rd','4'=>'4th','last'=>'Last'] as $val => $lbl): ?>
+            <div class="occ-choice">
+              <input type="checkbox" class="sr-occ" value="<?php echo $val; ?>" id="sr-occ-TEMPLATE-<?php echo $val; ?>">
+              <label for="sr-occ-TEMPLATE-<?php echo $val; ?>"><?php echo $lbl; ?></label>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+
+      <div class="sched-field sr-field-trigger">
+        <label>Triggering Event</label>
+        <select class="sr-trigger">
+          <option value="date_of_death">Date of Death</option>
+        </select>
+        <label>Wait how many days after?</label>
+        <input type="number" class="sr-offset" min="0" step="1" placeholder="e.g. 9">
+      </div>
+
+      <div class="sched-field sr-field-time">
+        <label>Time</label>
+        <input type="time" class="sr-time">
+      </div>
+
+      <div class="sched-field sr-field-label">
+        <label>Label <span style="text-transform:none;">(shown to staff/parishioners)</span></label>
+        <input type="text" class="sr-label" placeholder="e.g. 1st &amp; 3rd Sat Baptism">
+      </div>
+
+      <div class="sched-field sr-field-note">
+        <label>Note <span style="text-transform:none;">(shown instead of a time slot)</span></label>
+        <textarea class="sr-note" style="min-height:50px;" placeholder="e.g. Coordinate directly with the priest to agree on a date."></textarea>
+      </div>
+    </div>
+  </template>
 
   <script src="assets/js/catalog.js"></script>
 

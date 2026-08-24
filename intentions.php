@@ -176,7 +176,17 @@ require_once 'includes/dashboard-header.php';
 
       <!-- Step 1: appointment details -->
       <div class="modal-substep active" id="stepDetails">
-        <div class="form-group">
+
+        <!-- Only shown for services whose schedule rule is 'conditional'
+             (e.g. Burial Mass = date of death + N days). Toggled by
+             intentions.js based on CONDITIONAL_SERVICE_KEYS. -->
+        <div class="form-group" id="dateOfDeathGroup" style="display:none;">
+          <label for="dateOfDeath">Date of Death</label>
+          <input type="date" id="dateOfDeath" max="<?php echo date('Y-m-d'); ?>">
+          <p class="slot-hint">The Mass date is computed automatically from this.</p>
+        </div>
+
+        <div class="form-group" id="apptDateGroup">
           <label for="apptDate">Preferred Date</label>
           <input type="date" name="appointment_date" id="apptDate" min="<?php echo date('Y-m-d'); ?>" required>
         </div>
