@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var modal = document.getElementById('bookingModal');
   var modalServiceName = document.getElementById('modalServiceName');
   var serviceKeyInput = document.getElementById('serviceKeyInput');
-  var feeDisplay = document.getElementById('feeDisplay');
 
   // Step 1 elements
   var stepDetails = document.getElementById('stepDetails');
@@ -28,18 +27,16 @@ document.addEventListener('DOMContentLoaded', function () {
   var formErrorStep1 = document.getElementById('formErrorStep1');
   var goToPaymentBtn = document.getElementById('goToPayment');
 
-  // Step 2 elements
+  // Step 2 (documents) elements
   var backToDetailsBtn = document.getElementById('backToDetails');
-  var pmCash = document.getElementById('pmCash');
-  var pmGcash = document.getElementById('pmGcash');
-  var cashPanel = document.getElementById('cashPanel');
-  var gcashPanel = document.getElementById('gcashPanel');
-  var gcashRedirectStatus = document.getElementById('gcashRedirectStatus');
-  var gcashRedirectText = document.getElementById('gcashRedirectText');
+  var docsFieldsContainer = document.getElementById('docsFieldsContainer');
+  var docsNoneNote = document.getElementById('docsNoneNote');
   var formErrorStep2 = document.getElementById('formErrorStep2');
   var formSuccess = document.getElementById('formSuccess');
   var form = document.getElementById('bookingForm');
   var submitBtn = document.getElementById('modalSubmit');
+
+  var currentRequirements = [];
 
   // Services whose schedule is 'conditional' (date derived from another
   // event, e.g. Burial Mass = date of death + N days). Keep this in sync
@@ -50,10 +47,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // time picked (by_arrangement / always_available) — set only from the
   // actual server response type, never guessed from rendered text.
   var noSlotRequired = false;
-
-  function formatPeso(n) {
-    return '₱' + Number(n).toLocaleString();
-  }
 
   function showStep(stepNum) {
     if (stepNum === 1) {
@@ -71,22 +64,52 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  function togglePaymentPanels() {
-    var isGcash = pmGcash.checked;
-    gcashPanel.classList.toggle('show', isGcash);
-    cashPanel.classList.toggle('show', !isGcash);
+  // One file input per requirement line, named req_doc_0, req_doc_1, ... in
+  // the same order — the server re-derives this same requirement list from
+  // the service itself rather than trusting anything the client sends about
+  // what the requirements are.
+  function renderDocumentSlots(reqs) {
+    docsFieldsContainer.innerHTML = '';
+    reqs.forEach(function (label, i) {
+      var group = document.createElement('div');
+      group.className = 'form-group';
+
+      var lbl = document.createElement('label');
+      lbl.setAttribute('for', 'reqDoc' + i);
+      lbl.textContent = label;
+
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.id = 'reqDoc' + i;
+      input.name = 'req_doc_' + i;
+      input.accept = '.jpg,.jpeg,.png,.pdf';
+      input.required = true;
+
+      var hint = document.createElement('p');
+      hint.className = 'slot-hint';
+      hint.textContent = 'JPG, PNG, or PDF, up to 5MB.';
+
+      group.appendChild(lbl);
+      group.appendChild(input);
+      group.appendChild(hint);
+      docsFieldsContainer.appendChild(group);
+    });
   }
 
-  function openModal(serviceKey, serviceName, serviceFee) {
+  function openModal(serviceKey, serviceName, requirements) {
     serviceKeyInput.value = serviceKey;
     modalServiceName.textContent = 'Request ' + serviceName;
-    feeDisplay.textContent = formatPeso(serviceFee || 0);
+    currentRequirements = requirements || [];
 
     dateInput.value = '';
     timeInput.value = '';
     notesInput.value = '';
     noSlotRequired = false;
     slotGrid.innerHTML = '<p class="slot-empty">Choose a date to see open times.</p>';
+
+    var hasRequirements = currentRequirements.length > 0;
+    docsNoneNote.style.display = hasRequirements ? 'none' : 'block';
+    renderDocumentSlots(currentRequirements);
 
     var isConditionalService = CONDITIONAL_SERVICE_KEYS.indexOf(serviceKey) !== -1;
 
@@ -104,10 +127,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     dateInput.required = !isConditionalService;
 
-    pmCash.checked = true;
-    togglePaymentPanels();
-    gcashRedirectStatus.classList.remove('show');
-
     formErrorStep1.classList.remove('show');
     formErrorStep2.classList.remove('show');
     formSuccess.classList.remove('show');
@@ -124,7 +143,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.querySelectorAll('[data-book-btn]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      openModal(btn.dataset.serviceKey, btn.dataset.serviceName, btn.dataset.serviceFee);
+      var requirements = [];
+      try { requirements = JSON.parse(btn.dataset.requirements || '[]'); } catch (e) { /* no requirements */ }
+      openModal(btn.dataset.serviceKey, btn.dataset.serviceName, requirements);
     });
   });
 
@@ -265,33 +286,38 @@ document.addEventListener('DOMContentLoaded', function () {
     showStep(1);
   });
 
-  // ---------------- Step 2: payment ----------------
-  pmCash.addEventListener('change', togglePaymentPanels);
-  pmGcash.addEventListener('change', togglePaymentPanels);
-
   // ---------------- Submit ----------------
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     formErrorStep2.classList.remove('show');
     formSuccess.classList.remove('show');
 
+    for (var i = 0; i < currentRequirements.length; i++) {
+      var reqInput = document.getElementById('reqDoc' + i);
+      if (!reqInput || !reqInput.files || !reqInput.files.length) {
+        formErrorStep2.textContent = 'Please upload a document for "' + currentRequirements[i] + '".';
+        formErrorStep2.classList.add('show');
+        return;
+      }
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitting…';
-
-    if (pmGcash.checked) {
-      gcashRedirectStatus.classList.add('show');
-      gcashRedirectText.textContent = 'Connecting to GCash…';
-    }
 
     var formData = new FormData();
     formData.append('service_key', serviceKeyInput.value);
     formData.append('appointment_date', dateInput.value);
     formData.append('appointment_time', timeInput.value);
     formData.append('notes', notesInput.value);
-    formData.append('payment_method', pmGcash.checked ? 'gcash' : 'cash');
     if (dateOfDeathInput && dateOfDeathInput.value) {
       formData.append('date_of_death', dateOfDeathInput.value);
     }
+    currentRequirements.forEach(function (label, i) {
+      var reqInput = document.getElementById('reqDoc' + i);
+      if (reqInput && reqInput.files && reqInput.files[0]) {
+        formData.append('req_doc_' + i, reqInput.files[0]);
+      }
+    });
 
     fetch('ajax/book-appointment.php', {
       method: 'POST',
@@ -300,7 +326,6 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok || res.data.error) {
-          gcashRedirectStatus.classList.remove('show');
           formErrorStep2.textContent = res.data.error || 'Something went wrong. Please try again.';
           formErrorStep2.classList.add('show');
           submitBtn.disabled = false;
@@ -312,15 +337,6 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
 
-        if (res.data.checkout_url) {
-          gcashRedirectText.textContent = 'Redirecting you to GCash now…';
-          submitBtn.textContent = 'Redirecting…';
-          setTimeout(function () {
-            window.location.href = res.data.checkout_url;
-          }, 600);
-          return;
-        }
-
         formSuccess.textContent = 'Request submitted! You can track it under View Requests.';
         formSuccess.classList.add('show');
         submitBtn.textContent = 'Submitted';
@@ -329,7 +345,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 1200);
       })
       .catch(function () {
-        gcashRedirectStatus.classList.remove('show');
         formErrorStep2.textContent = 'Network error. Please try again.';
         formErrorStep2.classList.add('show');
         submitBtn.disabled = false;

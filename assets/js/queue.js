@@ -79,6 +79,124 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // ---------------- Review uploaded documents ----------------
+  var docsReviewModal = document.getElementById('docsReviewModal');
+  var docsReviewList = document.getElementById('docsReviewList');
+  var docsResubmitReason = document.getElementById('docsResubmitReason');
+  var docsReviewError = document.getElementById('docsReviewError');
+  var docsConfirmBtn = document.getElementById('docsConfirmBtn');
+  var docsResubmitBtn = document.getElementById('docsResubmitBtn');
+  var currentDocsReviewId = null;
+  var resubmitReasonShown = false;
+
+  function closeDocsReviewModal() {
+    docsReviewModal.classList.remove('open');
+    currentDocsReviewId = null;
+  }
+
+  document.querySelectorAll('[data-docs-review-id]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      currentDocsReviewId = btn.dataset.docsReviewId;
+      docsReviewList.innerHTML = '<li>Loading…</li>';
+      docsResubmitReason.style.display = 'none';
+      docsResubmitReason.value = '';
+      resubmitReasonShown = false;
+      docsResubmitBtn.textContent = 'Request Resubmission';
+      docsReviewError.classList.remove('show');
+      docsReviewModal.classList.add('open');
+
+      fetch('ajax/get-appointment-documents.php?id=' + encodeURIComponent(currentDocsReviewId))
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          if (!res.documents || !res.documents.length) {
+            docsReviewList.innerHTML = '<li>No documents were uploaded.</li>';
+            return;
+          }
+          docsReviewList.innerHTML = '';
+          res.documents.forEach(function (doc) {
+            var li = document.createElement('li');
+            if (doc.requirement_label) {
+              var strong = document.createElement('strong');
+              strong.textContent = doc.requirement_label + ': ';
+              li.appendChild(strong);
+            }
+            var a = document.createElement('a');
+            a.href = 'ajax/view-appointment-document.php?id=' + doc.id;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.textContent = doc.original_name || ('Document #' + doc.id);
+            li.appendChild(a);
+            docsReviewList.appendChild(li);
+          });
+        })
+        .catch(function () {
+          docsReviewList.innerHTML = '<li>Could not load documents.</li>';
+        });
+    });
+  });
+
+  document.getElementById('docsReviewCancel').addEventListener('click', closeDocsReviewModal);
+  docsReviewModal.addEventListener('click', function (e) { if (e.target === docsReviewModal) closeDocsReviewModal(); });
+
+  docsConfirmBtn.addEventListener('click', function () {
+    if (!confirm('Confirm these documents are correct? The parishioner will be able to pay next.')) return;
+    docsConfirmBtn.disabled = true;
+    docsConfirmBtn.textContent = 'Confirming…';
+    postForm('ajax/verify-documents.php', { id: currentDocsReviewId })
+      .then(function (res) {
+        if (!res.ok || res.data.error) {
+          docsReviewError.textContent = res.data.error || 'Something went wrong.';
+          docsReviewError.classList.add('show');
+          docsConfirmBtn.disabled = false;
+          docsConfirmBtn.textContent = 'Confirm Documents';
+          return;
+        }
+        window.location.reload();
+      })
+      .catch(function () {
+        docsReviewError.textContent = 'Network error. Please try again.';
+        docsReviewError.classList.add('show');
+        docsConfirmBtn.disabled = false;
+        docsConfirmBtn.textContent = 'Confirm Documents';
+      });
+  });
+
+  docsResubmitBtn.addEventListener('click', function () {
+    if (!resubmitReasonShown) {
+      docsResubmitReason.style.display = 'block';
+      docsResubmitReason.focus();
+      docsResubmitBtn.textContent = 'Send';
+      resubmitReasonShown = true;
+      return;
+    }
+    var reason = docsResubmitReason.value.trim();
+    if (!reason) {
+      docsReviewError.textContent = 'Please explain what needs to be fixed.';
+      docsReviewError.classList.add('show');
+      return;
+    }
+    docsReviewError.classList.remove('show');
+    docsResubmitBtn.disabled = true;
+    docsResubmitBtn.textContent = 'Sending…';
+    postForm('ajax/request-document-resubmission.php', { id: currentDocsReviewId, reason: reason })
+      .then(function (res) {
+        if (!res.ok || res.data.error) {
+          docsReviewError.textContent = res.data.error || 'Something went wrong.';
+          docsReviewError.classList.add('show');
+          docsResubmitBtn.disabled = false;
+          docsResubmitBtn.textContent = 'Send';
+          return;
+        }
+        window.location.reload();
+      })
+      .catch(function () {
+        docsReviewError.textContent = 'Network error. Please try again.';
+        docsReviewError.classList.add('show');
+        docsResubmitBtn.disabled = false;
+        docsResubmitBtn.textContent = 'Send';
+      });
+  });
+
   // ---------------- Reject ----------------
   var rejectModal = document.getElementById('rejectModal');
   var rejectReason = document.getElementById('rejectReason');

@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var verifyConfirm = document.getElementById('verifyConfirm');
   var verifyCancel = document.getElementById('verifyCancel');
   var currentVerifyId = null;
+  var currentVerifyType = 'appointment';
 
   var vdRequest = document.getElementById('vdRequest');
   var vdParishioner = document.getElementById('vdParishioner');
@@ -23,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function openVerifyModal(btn) {
     currentVerifyId = btn.dataset.verifyId;
+    currentVerifyType = btn.dataset.type || 'appointment';
     vdRequest.textContent = '#' + btn.dataset.verifyId;
     vdParishioner.textContent = btn.dataset.parishioner;
     vdService.textContent = btn.dataset.service;
@@ -105,6 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
         id: currentVerifyId,
         receipt_number: receiptNumber,
         confirmed: '1',
+        type: currentVerifyType,
       }),
     })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
@@ -133,9 +136,11 @@ document.addEventListener('DOMContentLoaded', function () {
   var rejectConfirm = document.getElementById('rejectConfirm');
   var rejectCancel = document.getElementById('rejectCancel');
   var currentRejectId = null;
+  var currentRejectType = 'appointment';
 
-  function openRejectModal(id) {
+  function openRejectModal(id, type) {
     currentRejectId = id;
+    currentRejectType = type || 'appointment';
     rejectReason.value = '';
     rejectError.classList.remove('show');
     rejectModal.classList.add('open');
@@ -148,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.querySelectorAll('[data-reject-id]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      openRejectModal(btn.dataset.rejectId);
+      openRejectModal(btn.dataset.rejectId, btn.dataset.type);
     });
   });
 
@@ -171,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function () {
     fetch('ajax/reject-payment.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ id: currentRejectId, reason: reason }),
+      body: new URLSearchParams({ id: currentRejectId, reason: reason, type: currentRejectType }),
     })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {

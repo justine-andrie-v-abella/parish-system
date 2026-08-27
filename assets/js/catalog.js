@@ -7,8 +7,25 @@ document.addEventListener('DOMContentLoaded', function () {
   var svcDesc = document.getElementById('svcDesc');
   var svcFee = document.getElementById('svcFee');
   var svcRequirements = document.getElementById('svcRequirements');
+  var svcFees = document.getElementById('svcFees');
+  var svcCategory = document.getElementById('svcCategory');
+  var schedSection = document.getElementById('schedSection');
+  var svcCertFields = document.getElementById('svcCertFields');
+  var certFieldsSection = document.getElementById('certFieldsSection');
   var serviceError = document.getElementById('serviceError');
   var serviceSave = document.getElementById('serviceSave');
+
+  // Sacraments get Schedule Rules (they're booked on a date); certificate
+  // requests get Certificate Form Fields instead (no date, but a
+  // staff-defined set of inputs the requestor fills in) — mutually exclusive.
+  function applyCategoryVisibility() {
+    var isCertificate = svcCategory && svcCategory.value === 'certificate';
+    if (schedSection) schedSection.style.display = isCertificate ? 'none' : '';
+    if (certFieldsSection) certFieldsSection.style.display = isCertificate ? '' : 'none';
+  }
+  if (svcCategory) {
+    svcCategory.addEventListener('change', applyCategoryVisibility);
+  }
 
   // ---------------- Schedule rule builder ----------------
   var schedRulesList = document.getElementById('schedRulesList');
@@ -159,9 +176,13 @@ document.addEventListener('DOMContentLoaded', function () {
     svcDesc.value = '';
     svcFee.value = '';
     svcRequirements.value = '';
+    if (svcFees) svcFees.value = '';
+    if (svcCertFields) svcCertFields.value = '';
+    if (svcCategory) svcCategory.value = 'sacrament';
     document.querySelectorAll('input[name="svcIcon"]').forEach(function (r) { r.checked = false; });
     if (schedRulesList) schedRulesList.innerHTML = '';
     serviceError.classList.remove('show');
+    applyCategoryVisibility();
   }
 
   function openModal() {
@@ -188,6 +209,10 @@ document.addEventListener('DOMContentLoaded', function () {
       svcDesc.value = btn.dataset.desc;
       svcFee.value = btn.dataset.fee;
       svcRequirements.value = btn.dataset.requirements;
+      if (svcFees) svcFees.value = btn.dataset.fees || '';
+      if (svcCertFields) svcCertFields.value = btn.dataset.certFields || '';
+      if (svcCategory) svcCategory.value = btn.dataset.category || 'sacrament';
+      applyCategoryVisibility();
       var iconInput = document.getElementById('icon-' + btn.dataset.icon);
       if (iconInput) iconInput.checked = true;
 
@@ -237,6 +262,18 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
+    if (svcFees) {
+      var feeLines = svcFees.value.split('\n').map(function (l) { return l.trim(); }).filter(function (l) { return l !== ''; });
+      for (var fi = 0; fi < feeLines.length; fi++) {
+        var parts = feeLines[fi].split('|').map(function (p) { return p.trim(); });
+        if (!parts[0] || parts[1] === undefined || parts[1] === '' || isNaN(Number(parts[1]))) {
+          serviceError.textContent = 'Each fee line needs a label and a numeric amount, e.g. "Sponsors | 100".';
+          serviceError.classList.add('show');
+          return;
+        }
+      }
+    }
+
     serviceError.classList.remove('show');
     serviceSave.disabled = true;
     serviceSave.textContent = 'Saving…';
@@ -252,6 +289,9 @@ document.addEventListener('DOMContentLoaded', function () {
         fee: svcFee.value,
         icon: icon.value,
         requirements: svcRequirements.value,
+        fees: svcFees ? svcFees.value : '',
+        category: svcCategory ? svcCategory.value : 'sacrament',
+        cert_fields: svcCertFields ? svcCertFields.value : '',
       }),
     })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
