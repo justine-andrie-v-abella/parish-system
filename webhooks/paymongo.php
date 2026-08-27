@@ -62,6 +62,12 @@ if (!verifyPaymongoSignature($rawPayload, $signatureHeader, PAYMONGO_WEBHOOK_SEC
 $data = json_decode($rawPayload, true);
 $eventType = $data['data']['attributes']['type'] ?? null;
 
+// Certificate requests share the same paymongo_source_id column but live in
+// a separate table (no appointment date/schedule concept — see
+// migration_add_certificate_requests.sql), so each source id is looked up
+// in both places.
+$certTableReady = $pdo->query("SELECT to_regclass('public.certificate_requests')")->fetchColumn() !== null;
+
 if ($eventType === 'source.chargeable') {
     $sourceId = $data['data']['attributes']['data']['id'] ?? null;
 
@@ -69,6 +75,12 @@ if ($eventType === 'source.chargeable') {
         $stmt = $pdo->prepare('SELECT id, service_key FROM appointments WHERE paymongo_source_id = ?');
         $stmt->execute([$sourceId]);
         $appt = $stmt->fetch();
+
+        if (!$appt && $certTableReady) {
+            $stmt = $pdo->prepare('SELECT id, service_key FROM certificate_requests WHERE paymongo_source_id = ?');
+            $stmt->execute([$sourceId]);
+            $appt = $stmt->fetch();
+        }
 
         if ($appt) {
             global $services;
@@ -82,16 +94,29 @@ if ($eventType === 'source.chargeable') {
     $sourceId = $data['data']['attributes']['data']['attributes']['source']['id'] ?? null;
     if ($sourceId) {
         $stmt = $pdo->prepare(
-            "UPDATE appointments SET payment_status = 'paid', status = 'confirmed' 
+            "UPDATE appointments SET payment_status = 'paid', status = 'confirmed'
              WHERE paymongo_source_id = ? AND payment_status != 'paid'"
         );
         $stmt->execute([$sourceId]);
+
+        if ($stmt->rowCount() === 0 && $certTableReady) {
+            $stmt = $pdo->prepare(
+                "UPDATE certificate_requests SET payment_status = 'paid'
+                 WHERE paymongo_source_id = ? AND payment_status != 'paid'"
+            );
+            $stmt->execute([$sourceId]);
+        }
     }
 } elseif ($eventType === 'payment.failed') {
     $sourceId = $data['data']['attributes']['data']['attributes']['source']['id'] ?? null;
     if ($sourceId) {
         $stmt = $pdo->prepare("UPDATE appointments SET status_reason = 'GCash payment failed' WHERE paymongo_source_id = ?");
         $stmt->execute([$sourceId]);
+
+        if ($stmt->rowCount() === 0 && $certTableReady) {
+            $stmt = $pdo->prepare("UPDATE certificate_requests SET status_reason = 'GCash payment failed' WHERE paymongo_source_id = ?");
+            $stmt->execute([$sourceId]);
+        }
     }
 }
 
