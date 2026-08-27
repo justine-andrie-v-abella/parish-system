@@ -59,6 +59,26 @@ $requirements = [
     'anointing'    => ['Name of the sick person', 'Address or hospital room', 'Contact number of family'],
 ];
 
+/**
+ * Itemized fee lines per service — e.g. baptism has a sponsor fee and a
+ * prejordan card fee instead of one flat price. Each entry is
+ * ['label' => ..., 'amount' => int, 'note' => string|null].
+ * Empty here in the hardcoded fallback; populated from service_fees below
+ * once database/migration_add_service_fees.sql has been run.
+ */
+$fees = [];
+
+/**
+ * Staff-defined input fields per certificate-request service (e.g. baptismal
+ * certificate: "Full Name of Registrant", "Birthday / Year of Birth", "Year
+ * of Baptism"). Each entry is just the field's label — certificates.php
+ * renders one text input per label, in order, and stores what the
+ * requestor typed as {label: value} JSON keyed by these same labels.
+ * Empty here in the hardcoded fallback; populated from service_form_fields
+ * below once database/migration_add_certificate_form_fields.sql has been run.
+ */
+$certFields = [];
+
 // Staff roles allowed on the internal (non-parishioner) login/registration pages.
 $staff_roles = [
     'priest'    => ['label' => 'Priest',    'sub' => 'Administrator'],
@@ -92,13 +112,21 @@ try {
     );
 
     if ($catalogPdo->query("SELECT to_regclass('public.services')")->fetchColumn() !== null) {
+        // The `category` column only exists once migration_add_certificate_requests.sql
+        // has been run — check first so an un-migrated install doesn't lose the
+        // entire live catalog to the hardcoded fallback over one missing column.
+        $hasCategory = $catalogPdo->query(
+            "SELECT 1 FROM information_schema.columns WHERE table_name = 'services' AND column_name = 'category'"
+        )->fetchColumn() !== false;
+        $categorySelect = $hasCategory ? ', category' : '';
+
         $dbServices = $catalogPdo->query(
-            "SELECT service_key, icon, name, description, fee FROM services WHERE is_active = TRUE ORDER BY sort_order ASC, id ASC"
+            "SELECT service_key, icon, name, description, fee{$categorySelect} FROM services WHERE is_active = TRUE ORDER BY sort_order ASC, id ASC"
         )->fetchAll();
 
         if ($dbServices) {
             $services = array_map(function ($s) {
-                return ['key' => $s['service_key'], 'icon' => $s['icon'], 'name' => $s['name'], 'desc' => $s['description'], 'fee' => (int) $s['fee']];
+                return ['key' => $s['service_key'], 'icon' => $s['icon'], 'name' => $s['name'], 'desc' => $s['description'], 'fee' => (int) $s['fee'], 'category' => $s['category'] ?? 'sacrament'];
             }, $dbServices);
 
             $requirements = [];
@@ -113,6 +141,26 @@ try {
             foreach ($services as $s) {
                 if (!isset($requirements[$s['key']])) {
                     $requirements[$s['key']] = [];
+                }
+            }
+
+            if ($catalogPdo->query("SELECT to_regclass('public.service_fees')")->fetchColumn() !== null) {
+                $fees = [];
+                $feeRows = $catalogPdo->query(
+                    "SELECT service_key, label, amount, note FROM service_fees ORDER BY service_key, sort_order ASC, id ASC"
+                )->fetchAll();
+                foreach ($feeRows as $f) {
+                    $fees[$f['service_key']][] = ['label' => $f['label'], 'amount' => (int) $f['amount'], 'note' => $f['note']];
+                }
+            }
+
+            if ($catalogPdo->query("SELECT to_regclass('public.service_form_fields')")->fetchColumn() !== null) {
+                $certFields = [];
+                $fieldRows = $catalogPdo->query(
+                    "SELECT service_key, field_label FROM service_form_fields ORDER BY service_key, sort_order ASC, id ASC"
+                )->fetchAll();
+                foreach ($fieldRows as $f) {
+                    $certFields[$f['service_key']][] = $f['field_label'];
                 }
             }
         }
