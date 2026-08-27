@@ -3,7 +3,7 @@
 require_once '../includes/config.php';
 require_role(['parishioner']);
 require_once '../includes/db.php';
-require_once '../includes/paymongo.php';
+require_once '../includes/uploads.php';
 
 header('Content-Type: application/json');
 
@@ -19,7 +19,6 @@ $date          = $_POST['appointment_date'] ?? '';
 $time          = $_POST['appointment_time'] ?? ''; // '' is valid for by_arrangement / always_available
 $dateOfDeath   = $_POST['date_of_death'] ?? '';     // only used for 'conditional' rules
 $notes         = trim($_POST['notes'] ?? '');
-$paymentMethod = $_POST['payment_method'] ?? '';
 
 $validKeys = array_column($services, 'key');
 if (!in_array($serviceKey, $validKeys, true)) {
@@ -32,9 +31,16 @@ if (strlen($notes) > 255) {
     $notes = substr($notes, 0, 255);
 }
 
-if (!in_array($paymentMethod, ['cash', 'gcash'], true)) {
+// One upload slot per requirement line (req_doc_0, req_doc_1, ...) — every
+// requirement needs its own document. Services with no requirements (e.g.
+// Mass Intention) skip this entirely.
+$reqList = $requirements[$serviceKey] ?? [];
+$hasRequirements = !empty($reqList);
+
+$docResult = save_requirement_documents($reqList);
+if (!$docResult['ok']) {
     http_response_code(422);
-    echo json_encode(['error' => 'Please choose a payment method.']);
+    echo json_encode(['error' => $docResult['error']]);
     exit;
 }
 
@@ -157,15 +163,10 @@ if ($byArrangementRule || $alwaysAvailableRule) {
     $finalTime = $timeNormalized;
 }
 
-// Look up the fee for this service
-$serviceFees = array_column($services, 'fee', 'key');
-$fee = (int) ($serviceFees[$serviceKey] ?? 0);
-
-if ($paymentMethod === 'gcash' && $fee <= 0) {
-    http_response_code(422);
-    echo json_encode(['error' => 'This service has no fee — please choose Cash instead.']);
-    exit;
-}
+// Documents are reviewed before payment is unlocked — unless this service
+// has no requirements to review at all, in which case skip straight to
+// payable (see includes/uploads.php / migration_add_appointment_documents.sql).
+$documentsStatus = $hasRequirements ? 'pending' : 'verified';
 
 try {
     $pdo->beginTransaction();
@@ -190,11 +191,29 @@ try {
 
     $insert = $pdo->prepare(
         "INSERT INTO appointments
-            (user_id, service_key, appointment_date, appointment_time, notes, status, payment_status, payment_method)
+            (user_id, service_key, appointment_date, appointment_time, notes, status, payment_status, documents_status)
          VALUES (?, ?, ?, ?, ?, 'pending', 'unpaid', ?)"
     );
-    $insert->execute([$uid, $serviceKey, $finalDate, $finalTime, $notes ?: null, $paymentMethod]);
+    $insert->execute([$uid, $serviceKey, $finalDate, $finalTime, $notes ?: null, $documentsStatus]);
     $newId = (int) $pdo->lastInsertId();
+
+    if ($docResult['files']) {
+        $hasReqLabel = $pdo->query(
+            "SELECT 1 FROM information_schema.columns WHERE table_name = 'appointment_documents' AND column_name = 'requirement_label'"
+        )->fetchColumn() !== false;
+
+        if ($hasReqLabel) {
+            $insDoc = $pdo->prepare('INSERT INTO appointment_documents (appointment_id, file_path, original_name, requirement_label) VALUES (?, ?, ?, ?)');
+            foreach ($docResult['files'] as $f) {
+                $insDoc->execute([$newId, $f['path'], $f['original_name'], $f['requirement_label']]);
+            }
+        } else {
+            $insDoc = $pdo->prepare('INSERT INTO appointment_documents (appointment_id, file_path, original_name) VALUES (?, ?, ?)');
+            foreach ($docResult['files'] as $f) {
+                $insDoc->execute([$newId, $f['path'], $f['original_name']]);
+            }
+        }
+    }
 
     $serviceNames = array_column($services, 'name', 'key');
     $svcLabel = $serviceNames[$serviceKey] ?? ucfirst($serviceKey);
@@ -203,29 +222,9 @@ try {
         ? date('F j, Y', strtotime($finalDate)) . ' at ' . date('g:i A', strtotime($finalTime))
         : date('F j, Y', strtotime($finalDate)) . ' (time to be arranged with the parish office)';
 
-    $checkoutUrl = null;
-
-    if ($paymentMethod === 'gcash') {
-        $successUrl = APP_URL . '/payment-return.php?appointment_id=' . $newId . '&result=success';
-        $failedUrl  = APP_URL . '/payment-return.php?appointment_id=' . $newId . '&result=failed';
-
-        $source = paymongo_create_gcash_source($fee * 100, $successUrl, $failedUrl); // centavos
-
-        if (!$source || empty($source['id']) || empty($source['checkout_url'])) {
-            $pdo->rollBack();
-            http_response_code(502);
-            echo json_encode(['error' => 'Could not connect to GCash right now. Please try again.']);
-            exit;
-        }
-
-        $updateSource = $pdo->prepare('UPDATE appointments SET paymongo_source_id = ? WHERE id = ?');
-        $updateSource->execute([$source['id'], $newId]);
-
-        $checkoutUrl = $source['checkout_url'];
-        $message = "Your {$svcLabel} request for {$whenLabel} is awaiting GCash payment.";
-    } else {
-        $message = "Your {$svcLabel} request for {$whenLabel} has been submitted and is pending confirmation. Please settle payment in cash at the parish office.";
-    }
+    $message = $hasRequirements
+        ? "Your {$svcLabel} request for {$whenLabel} has been submitted. The parish office will review your documents before payment."
+        : "Your {$svcLabel} request for {$whenLabel} has been submitted. You may now proceed to payment under View Requests.";
 
     $notify = $pdo->prepare('INSERT INTO notifications (user_id, message) VALUES (?, ?)');
     $notify->execute([$uid, $message]);
@@ -236,7 +235,6 @@ try {
         'success' => true,
         'id' => $newId,
         'message' => $message,
-        'checkout_url' => $checkoutUrl, // null for cash, present for gcash
     ]);
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {

@@ -1,7 +1,9 @@
 <?php
+// ajax/request-document-resubmission.php
 require_once '../includes/config.php';
-require_role(['treasurer']);
+require_role(['secretary', 'priest']);
 require_once '../includes/db.php';
+require_once '../includes/logs.php';
 
 header('Content-Type: application/json');
 
@@ -21,24 +23,19 @@ if ($id <= 0) {
 }
 if ($reason === '') {
     http_response_code(422);
-    echo json_encode(['error' => 'Please give a reason so the parishioner knows what to fix.']);
+    echo json_encode(['error' => 'Please explain what needs to be fixed.']);
     exit;
 }
 if (strlen($reason) > 255) {
     $reason = substr($reason, 0, 255);
 }
 
-// 'appointment' (default) or 'certificate' — see verify-payment.php for why
-// this endpoint branches on table name instead of duplicating itself.
-$type = ($_POST['type'] ?? 'appointment') === 'certificate' ? 'certificate' : 'appointment';
-$table = $type === 'certificate' ? 'certificate_requests' : 'appointments';
-
-$treasurerId = (int) $_SESSION['user_id'];
+$staffId = (int) $_SESSION['user_id'];
 
 try {
     $pdo->beginTransaction();
 
-    $stmt = $pdo->prepare("SELECT * FROM {$table} WHERE id = ? FOR UPDATE");
+    $stmt = $pdo->prepare('SELECT * FROM appointments WHERE id = ? FOR UPDATE');
     $stmt->execute([$id]);
     $appt = $stmt->fetch();
 
@@ -48,28 +45,32 @@ try {
         echo json_encode(['error' => 'Request not found.']);
         exit;
     }
-    if ($appt['payment_status'] !== 'unpaid') {
+    if ($appt['documents_status'] !== 'pending') {
         $pdo->rollBack();
         http_response_code(409);
-        echo json_encode(['error' => 'This payment has already been ' . $appt['payment_status'] . '.']);
+        echo json_encode(['error' => 'This request is not awaiting document review.']);
         exit;
     }
 
     $update = $pdo->prepare(
-        "UPDATE {$table}
-         SET payment_status = 'rejected', verified_by = ?, verified_at = NOW(), rejection_reason = ?
+        "UPDATE appointments
+         SET documents_status = 'resubmit_requested', documents_reason = ?, documents_reviewed_by = ?, documents_reviewed_at = NOW()
          WHERE id = ?"
     );
-    $update->execute([$treasurerId, $reason, $id]);
+    $update->execute([$reason, $staffId, $id]);
 
     $serviceNames = array_column($services, 'name', 'key');
     $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key']);
-    $message = "Your payment for the {$svcLabel} request could not be verified: {$reason}. Please visit the parish office to resolve this.";
+    $message = "Your documents for the {$svcLabel} request need another look: {$reason}. Please re-upload them under View Requests.";
 
     $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)');
-    $notify->execute([$appt['user_id'], $message, 'payment']);
+    $notify->execute([$appt['user_id'], $message, 'reminder']);
 
     $pdo->commit();
+
+    log_activity($pdo, $staffId, 'documents_resubmission_requested',
+        $_SESSION['full_name'] . " requested document resubmission for {$svcLabel} request #{$id}: {$reason}",
+        'appointment', $id);
 
     echo json_encode(['success' => true]);
 } catch (Exception $e) {
@@ -77,5 +78,5 @@ try {
         $pdo->rollBack();
     }
     http_response_code(500);
-    echo json_encode(['error' => 'Something went wrong rejecting this payment. Please try again.']);
+    echo json_encode(['error' => 'Something went wrong requesting resubmission. Please try again.']);
 }

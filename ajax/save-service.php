@@ -1,7 +1,7 @@
 <?php
 //parish-system\ajax\save-service.php
 require_once '../includes/config.php';
-require_role(['priest']);
+require_role(['priest', 'secretary']);
 require_once '../includes/db.php';
 require_once '../includes/logs.php';
 
@@ -20,8 +20,22 @@ $description  = trim($_POST['description'] ?? '');
 $fee          = $_POST['fee'] ?? '';
 $icon         = trim($_POST['icon'] ?? '');
 $requirements = trim($_POST['requirements'] ?? '');
+$feesInput    = trim($_POST['fees'] ?? '');
+$category     = trim($_POST['category'] ?? 'sacrament');
+$certFieldsInput = trim($_POST['cert_fields'] ?? '');
 
 $allowedIcons = ['dove', 'flame', 'rings', 'cross', 'candle', 'vessel'];
+$allowedCategories = ['sacrament', 'certificate'];
+
+if (!in_array($category, $allowedCategories, true)) {
+    $category = 'sacrament';
+}
+
+// The `category` column only exists once migration_add_certificate_requests.sql
+// has been run.
+$hasCategory = $pdo->query(
+    "SELECT 1 FROM information_schema.columns WHERE table_name = 'services' AND column_name = 'category'"
+)->fetchColumn() !== false;
 
 if ($name === '' || $description === '') {
     http_response_code(422);
@@ -40,6 +54,22 @@ if (!in_array($icon, $allowedIcons, true)) {
 }
 $fee = (int) $fee;
 
+// Each non-blank line is "Label | Amount | Note" (note optional).
+$feeLines = array_values(array_filter(array_map('trim', explode("\n", $feesInput)), fn($l) => $l !== ''));
+$parsedFees = [];
+foreach ($feeLines as $line) {
+    $parts = array_map('trim', explode('|', $line));
+    $label = $parts[0] ?? '';
+    $amount = $parts[1] ?? '';
+    $note = $parts[2] ?? '';
+    if ($label === '' || !is_numeric($amount) || (int) $amount < 0) {
+        http_response_code(422);
+        echo json_encode(['error' => 'Each fee line needs a label and a numeric amount, e.g. "Sponsors | 100".']);
+        exit;
+    }
+    $parsedFees[] = ['label' => $label, 'amount' => (int) $amount, 'note' => $note !== '' ? $note : null];
+}
+
 try {
     $pdo->beginTransaction();
 
@@ -57,8 +87,13 @@ try {
         }
         $key = $row['service_key'];
 
-        $update = $pdo->prepare('UPDATE services SET icon = ?, name = ?, description = ?, fee = ? WHERE id = ?');
-        $update->execute([$icon, $name, $description, $fee, $id]);
+        if ($hasCategory) {
+            $update = $pdo->prepare('UPDATE services SET icon = ?, name = ?, description = ?, fee = ?, category = ? WHERE id = ?');
+            $update->execute([$icon, $name, $description, $fee, $category, $id]);
+        } else {
+            $update = $pdo->prepare('UPDATE services SET icon = ?, name = ?, description = ?, fee = ? WHERE id = ?');
+            $update->execute([$icon, $name, $description, $fee, $id]);
+        }
         $logAction = 'service_updated';
         $logMsg = $_SESSION['full_name'] . " updated the {$name} service.";
     } else {
@@ -80,10 +115,17 @@ try {
 
         $maxOrder = (int) $pdo->query('SELECT COALESCE(MAX(sort_order), 0) FROM services')->fetchColumn();
 
-        $insert = $pdo->prepare(
-            'INSERT INTO services (service_key, icon, name, description, fee, sort_order) VALUES (?, ?, ?, ?, ?, ?)'
-        );
-        $insert->execute([$key, $icon, $name, $description, $fee, $maxOrder + 1]);
+        if ($hasCategory) {
+            $insert = $pdo->prepare(
+                'INSERT INTO services (service_key, icon, name, description, fee, category, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            );
+            $insert->execute([$key, $icon, $name, $description, $fee, $category, $maxOrder + 1]);
+        } else {
+            $insert = $pdo->prepare(
+                'INSERT INTO services (service_key, icon, name, description, fee, sort_order) VALUES (?, ?, ?, ?, ?, ?)'
+            );
+            $insert->execute([$key, $icon, $name, $description, $fee, $maxOrder + 1]);
+        }
         $id = (int) $pdo->lastInsertId();
         $logAction = 'service_created';
         $logMsg = $_SESSION['full_name'] . " added a new service: {$name}.";
@@ -99,6 +141,34 @@ try {
         $insReq = $pdo->prepare('INSERT INTO service_requirements (service_key, requirement_text, sort_order) VALUES (?, ?, ?)');
         foreach ($lines as $i => $line) {
             $insReq->execute([$key, $line, $i + 1]);
+        }
+    }
+
+    // Itemized fees — only touch this table if the migration has been applied.
+    if ($pdo->query("SELECT to_regclass('public.service_fees')")->fetchColumn() !== null) {
+        $delFee = $pdo->prepare('DELETE FROM service_fees WHERE service_key = ?');
+        $delFee->execute([$key]);
+
+        if ($parsedFees) {
+            $insFee = $pdo->prepare('INSERT INTO service_fees (service_key, label, amount, note, sort_order) VALUES (?, ?, ?, ?, ?)');
+            foreach ($parsedFees as $i => $f) {
+                $insFee->execute([$key, $f['label'], $f['amount'], $f['note'], $i + 1]);
+            }
+        }
+    }
+
+    // Certificate request form fields — only touch this table if the
+    // migration has been applied.
+    if ($pdo->query("SELECT to_regclass('public.service_form_fields')")->fetchColumn() !== null) {
+        $delFields = $pdo->prepare('DELETE FROM service_form_fields WHERE service_key = ?');
+        $delFields->execute([$key]);
+
+        $fieldLines = array_values(array_filter(array_map('trim', explode("\n", $certFieldsInput)), fn($l) => $l !== ''));
+        if ($fieldLines) {
+            $insField = $pdo->prepare('INSERT INTO service_form_fields (service_key, field_label, sort_order) VALUES (?, ?, ?)');
+            foreach ($fieldLines as $i => $line) {
+                $insField->execute([$key, $line, $i + 1]);
+            }
         }
     }
 

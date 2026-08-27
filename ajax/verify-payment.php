@@ -20,6 +20,13 @@ if ($id <= 0) {
     exit;
 }
 
+// 'appointment' (default) or 'certificate' — the two request kinds share
+// identical payment columns by design (see migration_add_certificate_requests.sql),
+// so this endpoint just targets the right table instead of duplicating itself.
+$type = ($_POST['type'] ?? 'appointment') === 'certificate' ? 'certificate' : 'appointment';
+$table = $type === 'certificate' ? 'certificate_requests' : 'appointments';
+$entityType = $type === 'certificate' ? 'certificate_request' : 'appointment';
+
 $receiptNumber = trim((string) ($_POST['receipt_number'] ?? ''));
 if ($receiptNumber === '') {
     http_response_code(422);
@@ -47,7 +54,7 @@ $treasurerId = (int) $_SESSION['user_id'];
 try {
     $pdo->beginTransaction();
 
-    $stmt = $pdo->prepare('SELECT * FROM appointments WHERE id = ? FOR UPDATE');
+    $stmt = $pdo->prepare("SELECT * FROM {$table} WHERE id = ? FOR UPDATE");
     $stmt->execute([$id]);
     $appt = $stmt->fetch();
 
@@ -64,10 +71,13 @@ try {
         exit;
     }
 
-    // Manual receipt numbers must be unique across appointments.
-    $dupe = $pdo->prepare('SELECT id FROM appointments WHERE receipt_number = ? AND id != ?');
-    $dupe->execute([$receiptNumber, $id]);
-    if ($dupe->fetch()) {
+    // Manual receipt numbers must be unique across both appointments and
+    // certificate requests — they're issued from the same physical booklet.
+    $dupeAppt = $pdo->prepare("SELECT id FROM appointments WHERE receipt_number = ? AND NOT (id = ? AND ? = 'appointment')");
+    $dupeAppt->execute([$receiptNumber, $id, $type]);
+    $dupeCert = $pdo->prepare("SELECT id FROM certificate_requests WHERE receipt_number = ? AND NOT (id = ? AND ? = 'certificate')");
+    $dupeCert->execute([$receiptNumber, $id, $type]);
+    if ($dupeAppt->fetch() || $dupeCert->fetch()) {
         $pdo->rollBack();
         http_response_code(409);
         echo json_encode(['error' => 'That receipt number is already in use on another request.']);
@@ -75,7 +85,7 @@ try {
     }
 
     $update = $pdo->prepare(
-        "UPDATE appointments
+        "UPDATE {$table}
          SET payment_status = 'paid', verified_by = ?, verified_at = NOW(), receipt_number = ?, rejection_reason = NULL
          WHERE id = ?"
     );
@@ -92,7 +102,7 @@ try {
 
     log_activity($pdo, $treasurerId, 'payment_verified',
         $_SESSION['full_name'] . " verified payment for {$svcLabel} request #{$id} (Receipt #{$receiptNumber}).",
-        'appointment', $id);
+        $entityType, $id);
 
     echo json_encode(['success' => true, 'receipt_number' => $receiptNumber]);
 } catch (Exception $e) {

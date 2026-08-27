@@ -3,7 +3,7 @@
 // Replaces all schedule rules for one service. Staff-only. Delete-and-reinsert
 // keeps this simple and avoids diffing rule rows against what's already saved.
 require_once '../includes/config.php';
-require_role(['priest']);
+require_role(['priest', 'secretary']);
 require_once '../includes/db.php';
 
 header('Content-Type: application/json');

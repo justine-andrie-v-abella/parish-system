@@ -1,6 +1,6 @@
 <?php
 require_once '../includes/config.php';
-require_role(['priest']);
+require_role(['priest', 'secretary']);
 require_once '../includes/db.php';
 require_once '../includes/logs.php';
 
