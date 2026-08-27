@@ -45,18 +45,36 @@ $allowedFilters = ['all', 'pending', 'paid', 'rejected', 'cash', 'gcash'];
 $filter = in_array($_GET['filter'] ?? 'pending', $allowedFilters, true) ? ($_GET['filter'] ?? 'pending') : 'pending';
 
 $where = '1=1';
-if ($filter === 'pending')  $where = "a.payment_status = 'unpaid'";
-if ($filter === 'paid')     $where = "a.payment_status = 'paid'";
-if ($filter === 'rejected') $where = "a.payment_status = 'rejected'";
-if ($filter === 'cash')     $where = "a.payment_method = 'cash'";
-if ($filter === 'gcash')    $where = "a.payment_method = 'gcash'";
+if ($filter === 'pending')  $where = "payment_status = 'unpaid'";
+if ($filter === 'paid')     $where = "payment_status = 'paid'";
+if ($filter === 'rejected') $where = "payment_status = 'rejected'";
+if ($filter === 'cash')     $where = "payment_method = 'cash'";
+if ($filter === 'gcash')    $where = "payment_method = 'gcash'";
 
-$rows = $pdo->query(
-    "SELECT a.*, u.full_name FROM appointments a
-     JOIN users u ON u.id = a.user_id
-     WHERE $where
-     ORDER BY a.created_at DESC LIMIT 200"
-)->fetchAll();
+$certReady = $pdo->query("SELECT to_regclass('public.certificate_requests')")->fetchColumn() !== null;
+
+// Appointments awaiting document review never had a payment method chosen
+// yet (see migration_add_appointment_documents.sql) — nothing to verify
+// until the parishioner actually submits payment, so keep them out of
+// this queue entirely.
+$sql = "SELECT a.id, a.user_id, a.service_key, a.payment_status, a.payment_method, a.reference_number,
+               a.payment_screenshot, a.receipt_number, a.created_at, u.full_name, 'appointment' AS request_type,
+               a.appointment_date::text AS appointment_date, a.appointment_time::text AS appointment_time,
+               NULL::text AS field_values
+        FROM appointments a JOIN users u ON u.id = a.user_id WHERE ($where) AND a.payment_method IS NOT NULL";
+
+if ($certReady) {
+    $sql .= " UNION ALL
+        SELECT c.id, c.user_id, c.service_key, c.payment_status, c.payment_method, c.reference_number,
+               c.payment_screenshot, c.receipt_number, c.created_at, u.full_name, 'certificate' AS request_type,
+               NULL::text AS appointment_date, NULL::text AS appointment_time,
+               c.field_values::text AS field_values
+        FROM certificate_requests c JOIN users u ON u.id = c.user_id WHERE $where";
+}
+
+$sql .= " ORDER BY created_at DESC LIMIT 200";
+
+$rows = $pdo->query($sql)->fetchAll();
 
 $page_title = 'Payment Verification — ' . $parish['name'];
 require_once 'includes/dashboard-header.php';
@@ -141,11 +159,23 @@ require_once 'includes/dashboard-header.php';
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($rows as $r): ?>
+        <?php foreach ($rows as $r):
+          $isCert = $r['request_type'] === 'certificate';
+          if ($isCert) {
+              $fieldValues = json_decode($r['field_values'] ?? '{}', true) ?: [];
+              $detailParts = [];
+              foreach ($fieldValues as $label => $value) {
+                  if ($value !== '' && $value !== null) $detailParts[] = $label . ': ' . $value;
+              }
+              $detail = $detailParts ? implode(' · ', $detailParts) : '—';
+          } else {
+              $detail = date('F j, Y', strtotime($r['appointment_date'])) . ($r['appointment_time'] ? ' · ' . date('g:i A', strtotime($r['appointment_time'])) : '');
+          }
+        ?>
           <tr>
-            <td>#<?php echo $r['id']; ?></td>
+            <td>#<?php echo $r['id']; ?> <span style="font-size:10px; color:var(--ink-soft); text-transform:uppercase;"><?php echo $isCert ? 'Cert' : 'Appt'; ?></span></td>
             <td><?php echo htmlspecialchars($r['full_name']); ?></td>
-            <td class="svc-cell"><?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?></td>
+            <td class="svc-cell"><?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?><br><span style="font-size:11px; color:var(--ink-soft);"><?php echo htmlspecialchars($detail); ?></span></td>
             <td>₱<?php echo number_format(payment_amount($r['service_key'], $feeMap)); ?></td>
             <td><?php if ($r['payment_method']): ?><span class="pm-chip <?php echo $r['payment_method']; ?>"><?php echo strtoupper($r['payment_method']); ?></span><?php else: ?>—<?php endif; ?></td>
             <td>
@@ -165,17 +195,18 @@ require_once 'includes/dashboard-header.php';
                 <?php if ($r['payment_status'] === 'unpaid'): ?>
                   <button type="button" class="verify-btn"
                   data-verify-id="<?php echo $r['id']; ?>"
+                  data-type="<?php echo $isCert ? 'certificate' : 'appointment'; ?>"
                   data-parishioner="<?php echo htmlspecialchars($r['full_name']); ?>"
                   data-service="<?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?>"
                   data-amount="<?php echo number_format(payment_amount($r['service_key'], $feeMap)); ?>"
                   data-method="<?php echo htmlspecialchars($r['payment_method'] ?? ''); ?>"
                   data-reference="<?php echo htmlspecialchars($r['reference_number'] ?? ''); ?>"
                   data-screenshot="<?php echo htmlspecialchars($r['payment_screenshot'] ?? ''); ?>"
-                  data-date="<?php echo date('F j, Y', strtotime($r['appointment_date'])); ?>"
+                  data-date="<?php echo htmlspecialchars($detail); ?>"
                   data-suggested-receipt="<?php echo htmlspecialchars(generate_receipt_number($r['id'])); ?>">View &amp; Verify</button>
-                  <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>">Reject</button>
+                  <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>" data-type="<?php echo $isCert ? 'certificate' : 'appointment'; ?>">Reject</button>
                 <?php elseif ($r['payment_status'] === 'paid'): ?>
-                  <a href="receipt.php?id=<?php echo $r['id']; ?>" target="_blank">Receipt</a>
+                  <a href="receipt.php?id=<?php echo $r['id']; ?>&type=<?php echo $isCert ? 'certificate' : 'appointment'; ?>" target="_blank">Receipt</a>
                 <?php else: ?>
                   <span style="font-size:11px; color:var(--ink-soft);">—</span>
                 <?php endif; ?>
@@ -198,7 +229,7 @@ require_once 'includes/dashboard-header.php';
       <div class="vd-row"><span>Request</span><span id="vdRequest">—</span></div>
       <div class="vd-row"><span>Parishioner</span><span id="vdParishioner">—</span></div>
       <div class="vd-row"><span>Service</span><span id="vdService">—</span></div>
-      <div class="vd-row"><span>Appointment Date</span><span id="vdDate">—</span></div>
+      <div class="vd-row"><span>Details</span><span id="vdDate">—</span></div>
       <div class="vd-row"><span>Amount Due</span><span id="vdAmount">—</span></div>
       <div class="vd-row"><span>Payment Method</span><span id="vdMethod">—</span></div>
       <div class="vd-row" id="vdReferenceRow"><span>Reference Number</span><span id="vdReference">—</span></div>

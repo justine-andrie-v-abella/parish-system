@@ -45,7 +45,7 @@ require_once 'includes/dashboard-header.php';
 ?>
 
 <style>
-/* Scoped styles for the 2-step booking modal's payment step.
+/* Scoped styles for the 2-step booking modal (details, then documents).
    Safe to move into assets/css/dashboard.css later if you'd rather
    keep all dashboard styling in one file — kept inline here so it
    doesn't touch/override anything already in your stylesheet. */
@@ -62,50 +62,6 @@ require_once 'includes/dashboard-header.php';
 
 .modal-substep{ display:none; }
 .modal-substep.active{ display:block; }
-
-.pm-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px; }
-.pm-card{ position:relative; }
-.pm-card input{ position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
-.pm-card label{
-  display:flex; flex-direction:column; align-items:center; gap:8px;
-  border:1px solid var(--line); border-radius:14px; padding:18px 10px; text-align:center; cursor:pointer;
-  transition: all .18s; font-size:13px; color: var(--ink-soft);
-}
-.pm-card label svg{ width:24px; height:24px; color: var(--gold-dim); }
-.pm-card input:checked + label{ border-color: var(--gold); background: var(--cream-deep); color:var(--navy); font-weight:600; }
-
-.gcash-panel, .cash-panel{ display:none; }
-.gcash-panel.show, .cash-panel.show{ display:block; }
-
-.qr-box img{ width:100%; height:100%; object-fit:contain; }
-.qr-placeholder svg{ width:32px; height:32px; margin: 0 auto 8px; color: var(--gold-dim); }
-
-.upload-drop:hover{ border-color: var(--gold); }
-.upload-drop input[type=file]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
-.upload-drop .up-icon{ width:26px; height:26px; margin:0 auto 8px; color: var(--gold-dim); }
-.upload-drop p{ font-size:12.5px; color: var(--ink-soft); margin:0; }
-.upload-preview.show{ display:block; }
-.upload-preview img{ max-width:140px; max-height:140px; border-radius:10px; border:1px solid var(--line); }
-.upload-preview .up-filename{ font-size:11.5px; color: var(--ink-soft); margin-top:6px; word-break:break-all; }
-
-.cash-reminder{
-  display:flex; gap:10px; align-items:flex-start; background:#FBF1DD; border:1px solid var(--gold);
-  border-radius:12px; padding:14px; font-size:13px; color: var(--brown);
-}
-.cash-reminder svg{ width:18px; height:18px; flex-shrink:0; color: var(--gold-dim); }
-.gcash-redirect-status{
-  display:none; align-items:center; gap:10px; margin-top:14px;
-  padding:12px 14px; background: var(--cream-deep); border-radius:10px;
-  font-size:12.5px; color: var(--ink-soft);
-}
-.gcash-redirect-status.show{ display:flex; }
-
-.redirect-spinner{
-  width:16px; height:16px; border-radius:50%;
-  border:2px solid var(--line); border-top-color: var(--gold);
-  animation: spin .7s linear infinite; flex-shrink:0;
-}
-@keyframes spin{ to{ transform: rotate(360deg); } }
 </style>
 
 <div class="dash-hero page-hero">
@@ -124,7 +80,9 @@ require_once 'includes/dashboard-header.php';
     'candle' => '<path d="M12 2c1 2-1 2.5-1 4a1 1 0 0 0 2 0c0-1.5-2-2-1-4Z"/><rect x="9" y="8" width="6" height="13" rx="1"/><path d="M9 12h6"/>',
     'vessel' => '<path d="M8 3h8M12 3v4"/><path d="M6 9c0-1.1 2.7-2 6-2s6 .9 6 2-2.7 8-6 10c-3.3-2-6-8.9-6-10Z"/>',
   ];
-  foreach ($services as $svc): ?>
+  foreach ($services as $svc):
+    if (($svc['category'] ?? 'sacrament') === 'certificate') continue; // certificates are requested on certificates.php, not booked here
+  ?>
     <div class="intention-card">
       <div class="service-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><?php echo $icons[$svc['icon']]; ?></svg>
@@ -142,13 +100,22 @@ require_once 'includes/dashboard-header.php';
             <li><?php echo htmlspecialchars($doc); ?></li>
           <?php endforeach; ?>
         </ul>
+        <?php if (!empty($fees[$svc['key']])): ?>
+          <p style="font-family:var(--font-mono, monospace); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); margin:14px 0 6px;">Fees</p>
+          <ul>
+            <?php foreach ($fees[$svc['key']] as $f): ?>
+              <li>₱<?php echo number_format($f['amount']); ?> — <?php echo htmlspecialchars($f['label']); ?><?php echo $f['note'] ? ' (' . htmlspecialchars($f['note']) . ')' : ''; ?></li>
+            <?php endforeach; ?>
+          </ul>
+        <?php endif; ?>
       </div>
 
       <button type="button" class="btn btn-gold btn-book"
         data-book-btn
         data-service-key="<?php echo htmlspecialchars($svc['key']); ?>"
         data-service-name="<?php echo htmlspecialchars($svc['name']); ?>"
-        data-service-fee="<?php echo (int) $svc['fee']; ?>">
+        data-service-fee="<?php echo (int) $svc['fee']; ?>"
+        data-requirements="<?php echo htmlspecialchars(json_encode($requirements[$svc['key']] ?? [])); ?>">
         Request This
       </button>
     </div>
@@ -168,7 +135,7 @@ require_once 'includes/dashboard-header.php';
       <span class="modal-step-label">Details</span>
       <span class="modal-step-line"></span>
       <span class="modal-step-dot" id="stepDot2">2</span>
-      <span class="modal-step-label">Payment</span>
+      <span class="modal-step-label">Documents</span>
     </div>
 
     <form id="bookingForm" enctype="multipart/form-data">
@@ -207,55 +174,21 @@ require_once 'includes/dashboard-header.php';
 
         <div class="modal-actions">
           <button type="button" class="btn btn-outline btn-sm" id="modalCancel">Cancel</button>
-          <button type="button" class="btn btn-gold btn-sm" id="goToPayment">Next: Payment →</button>
+          <button type="button" class="btn btn-gold btn-sm" id="goToPayment">Next: Documents →</button>
         </div>
       </div>
 
-      <!-- Step 2: payment -->
+      <!-- Step 2: document upload — reviewed by the parish office before
+           payment is unlocked (see requests.php). Skipped entirely (no
+           files required) for services with no listed requirements. -->
       <div class="modal-substep" id="stepPayment">
-        <div class="form-group">
-          <label>Estimated Fee: <b id="feeDisplay">₱0</b></label>
-        </div>
+        <!-- Populated by intentions.js with one file input per requirement
+             line (JPG, PNG, or PDF, 5MB each) — data-requirements on the
+             "Request This" button. -->
+        <div id="docsFieldsContainer"></div>
 
-        <div class="form-group">
-          <label>Payment Method</label>
-          <div class="pm-grid">
-            <div class="pm-card">
-              <input type="radio" name="payment_method" id="pmCash" value="cash" checked>
-              <label for="pmCash">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg>
-                Cash
-              </label>
-            </div>
-            <div class="pm-card">
-              <input type="radio" name="payment_method" id="pmGcash" value="gcash">
-              <label for="pmGcash">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg>
-                GCash
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div class="cash-panel show" id="cashPanel">
-          <div class="cash-reminder">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
-            <span>Please settle payment in cash at the parish office. Bring this confirmation with you.</span>
-          </div>
-        </div>
-
-        <div class="gcash-panel" id="gcashPanel">
-          <div class="gcash-redirect-note">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/>
-            </svg>
-            <span>You'll be redirected to GCash to complete your payment securely. Once approved, your request is automatically confirmed — no screenshots or reference numbers needed.</span>
-          </div>
-
-          <div class="gcash-redirect-status" id="gcashRedirectStatus">
-            <div class="redirect-spinner"></div>
-            <span id="gcashRedirectText">Connecting to GCash&hellip;</span>
-          </div>
+        <div class="form-group" id="docsNoneNote" style="display:none;">
+          <p class="slot-hint">This service has no document requirements — you can submit and proceed straight to payment.</p>
         </div>
 
         <p class="form-error" id="formErrorStep2"></p>

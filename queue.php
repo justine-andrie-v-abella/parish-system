@@ -155,7 +155,7 @@ require_once 'includes/dashboard-header.php';
   <?php else: ?>
     <table class="requests-table">
       <thead>
-        <tr><th>Request</th><th>Parishioner</th><th>Service</th><th>Date</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
+        <tr><th>Request</th><th>Parishioner</th><th>Service</th><th>Date</th><th>Documents</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
       </thead>
       <tbody>
         <?php foreach ($rows as $r):
@@ -163,6 +163,7 @@ require_once 'includes/dashboard-header.php';
           // sitting in a state that assumed a future date (pending / confirmed).
           $isOverdue = $r['appointment_date'] < $today
               && in_array($r['status'], ['pending', 'confirmed', 'approved'], true);
+          $docsStatus = $r['documents_status'] ?? 'verified';
         ?>
           <tr>
             <td>#<?php echo $r['id']; ?></td>
@@ -174,6 +175,11 @@ require_once 'includes/dashboard-header.php';
                 <div class="overdue-tag">Overdue</div>
               <?php endif; ?>
             </td>
+            <td>
+              <span class="status-pill <?php echo $docsStatus === 'verified' ? 'completed' : ($docsStatus === 'resubmit_requested' ? 'rejected' : 'pending'); ?>">
+                <?php echo $docsStatus === 'resubmit_requested' ? 'Resubmit Requested' : ucfirst($docsStatus); ?>
+              </span>
+            </td>
             <td><span class="pm-chip <?php echo $r['payment_status']; ?>"><?php echo ucfirst($r['payment_status']); ?></span></td>
             <td>
               <span class="status-pill <?php echo $r['status']; ?>"><?php echo $r['status'] === 'no_show' ? 'No-show' : ucfirst($r['status']); ?></span>
@@ -183,6 +189,9 @@ require_once 'includes/dashboard-header.php';
             </td>
             <td>
               <div class="row-actions">
+                <?php if ($docsStatus === 'pending'): ?>
+                  <button type="button" class="docs-review-btn" data-docs-review-id="<?php echo $r['id']; ?>">Review Documents</button>
+                <?php endif; ?>
                 <?php if ($r['status'] === 'pending'): ?>
                   <?php if ($isOverdue): ?>
                     <button type="button" class="approve-btn" disabled title="Date has passed — reschedule before approving">Approve</button>
@@ -230,6 +239,21 @@ require_once 'includes/dashboard-header.php';
     <div class="qmodal-actions">
       <button type="button" class="btn btn-outline btn-sm" id="rejectCancel">Cancel</button>
       <button type="button" class="btn btn-gold btn-sm" id="rejectConfirm">Reject</button>
+    </div>
+  </div>
+</div>
+
+<!-- Review uploaded documents modal -->
+<div class="qmodal-overlay" id="docsReviewModal">
+  <div class="qmodal-box">
+    <h3>Review uploaded documents</h3>
+    <ul id="docsReviewList" style="font-size:13.5px; margin:0 0 14px; padding-left:18px;"></ul>
+    <textarea id="docsResubmitReason" placeholder="If something's wrong, explain what needs to be fixed…" style="display:none;"></textarea>
+    <p class="qmodal-error" id="docsReviewError"></p>
+    <div class="qmodal-actions">
+      <button type="button" class="btn btn-outline btn-sm" id="docsReviewCancel">Cancel</button>
+      <button type="button" class="reject-btn" id="docsResubmitBtn" style="border-radius:999px; padding:9px 16px;">Request Resubmission</button>
+      <button type="button" class="btn btn-gold btn-sm" id="docsConfirmBtn">Confirm Documents</button>
     </div>
   </div>
 </div>

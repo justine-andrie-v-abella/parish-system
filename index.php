@@ -91,7 +91,9 @@
         'candle' => '<path d="M12 2c1 2-1 2.5-1 4a1 1 0 0 0 2 0c0-1.5-2-2-1-4Z"/><rect x="9" y="8" width="6" height="13" rx="1"/><path d="M9 12h6"/>',
         'vessel' => '<path d="M8 3h8M12 3v4"/><path d="M6 9c0-1.1 2.7-2 6-2s6 .9 6 2-2.7 8-6 10c-3.3-2-6-8.9-6-10Z"/>',
       ];
-      foreach ($services as $svc): ?>
+      foreach ($services as $svc):
+        if (($svc['category'] ?? 'sacrament') === 'certificate') continue; // certificates are requested after logging in, not shown publicly
+      ?>
         <div class="service-card reveal">
           <div class="service-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><?php echo $icons[$svc['icon']]; ?></svg>
@@ -116,7 +118,10 @@
     </div>
 
     <div class="req-list">
-      <?php $i = 0; foreach ($services as $svc): $i++; ?>
+      <?php $i = 0; foreach ($services as $svc):
+        if (($svc['category'] ?? 'sacrament') === 'certificate') continue;
+        $i++;
+      ?>
         <div class="req-item reveal<?php echo $i === 1 ? ' open' : ''; ?>">
           <button class="req-trigger">
             <span><?php echo htmlspecialchars($svc['name']); ?></span>
@@ -128,6 +133,14 @@
                 <li><?php echo htmlspecialchars($doc); ?></li>
               <?php endforeach; ?>
             </ul>
+            <?php if (!empty($fees[$svc['key']])): ?>
+              <p style="font-family:var(--font-mono, monospace); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); margin:14px 0 6px;">Fees</p>
+              <ul>
+                <?php foreach ($fees[$svc['key']] as $f): ?>
+                  <li>₱<?php echo number_format($f['amount']); ?> — <?php echo htmlspecialchars($f['label']); ?><?php echo $f['note'] ? ' (' . htmlspecialchars($f['note']) . ')' : ''; ?></li>
+                <?php endforeach; ?>
+              </ul>
+            <?php endif; ?>
           </div>
         </div>
       <?php endforeach; ?>

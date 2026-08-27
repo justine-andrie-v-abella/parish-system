@@ -5,10 +5,12 @@ require_once 'includes/db.php';
 require_once 'includes/payments.php';
 
 $id = (int) ($_GET['id'] ?? 0);
+$type = ($_GET['type'] ?? 'appointment') === 'certificate' ? 'certificate' : 'appointment';
+$table = $type === 'certificate' ? 'certificate_requests' : 'appointments';
 
 $stmt = $pdo->prepare(
     "SELECT a.*, u.full_name, u.email, v.full_name AS verified_by_name
-     FROM appointments a
+     FROM {$table} a
      JOIN users u ON u.id = a.user_id
      LEFT JOIN users v ON v.id = a.verified_by
      WHERE a.id = ?"
@@ -91,7 +93,17 @@ $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key'])
   <div class="r-rows">
     <div class="r-row"><span>Received From</span><span><?php echo htmlspecialchars($appt['full_name']); ?></span></div>
     <div class="r-row"><span>Service</span><span><?php echo htmlspecialchars($svcLabel); ?></span></div>
-    <div class="r-row"><span>Appointment Date</span><span><?php echo date('F j, Y', strtotime($appt['appointment_date'])); ?></span></div>
+    <?php if ($type === 'certificate'):
+      $fieldValues = json_decode($appt['field_values'] ?? '{}', true) ?: [];
+    ?>
+      <?php foreach ($fieldValues as $label => $value): ?>
+        <?php if ($value !== '' && $value !== null): ?>
+          <div class="r-row"><span><?php echo htmlspecialchars($label); ?></span><span><?php echo htmlspecialchars($value); ?></span></div>
+        <?php endif; ?>
+      <?php endforeach; ?>
+    <?php else: ?>
+      <div class="r-row"><span>Appointment Date</span><span><?php echo date('F j, Y', strtotime($appt['appointment_date'])); ?></span></div>
+    <?php endif; ?>
     <div class="r-row"><span>Payment Method</span><span><?php echo strtoupper($appt['payment_method'] ?? '—'); ?></span></div>
     <?php if ($appt['reference_number']): ?>
       <div class="r-row"><span>Reference No.</span><span><?php echo htmlspecialchars($appt['reference_number']); ?></span></div>
@@ -113,7 +125,7 @@ $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key'])
 
 <div class="actions">
   <button type="button" onclick="window.print()">Print / Save as PDF</button>
-  <a href="<?php echo $_SESSION['role'] === 'treasurer' ? 'payments.php' : 'requests.php'; ?>" class="secondary">← Back</a>
+  <a href="<?php echo $_SESSION['role'] === 'treasurer' ? 'payments.php' : ($type === 'certificate' ? 'certificates.php' : 'requests.php'); ?>" class="secondary">← Back</a>
 </div>
 
 </body>
