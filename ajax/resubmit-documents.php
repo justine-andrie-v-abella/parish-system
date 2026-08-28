@@ -95,11 +95,8 @@ try {
 
     $pdo->commit();
 
-    foreach ($pathsToDelete as $path) {
-        $fullPath = APPOINTMENT_DOCS_DIR . '/' . basename($path);
-        if (is_file($fullPath)) {
-            unlink($fullPath);
-        }
+    if ($pathsToDelete) {
+        supabase_storage_delete(array_map('basename', $pathsToDelete));
     }
 
     echo json_encode(['success' => true]);

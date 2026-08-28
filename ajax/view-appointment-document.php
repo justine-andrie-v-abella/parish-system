@@ -1,8 +1,9 @@
 <?php
 // ajax/view-appointment-document.php
 // Streams one uploaded document scan after confirming the requester is
-// either the owning parishioner or parish staff. Files themselves live
-// outside direct web access (see uploads/appointment_documents/.htaccess).
+// either the owning parishioner or parish staff. Files live in a private
+// Supabase Storage bucket — this is the only place they're ever fetched
+// back from it (see includes/supabase-storage.php).
 require_once '../includes/config.php';
 require_role(['parishioner', 'secretary', 'priest']);
 require_once '../includes/db.php';
@@ -35,17 +36,16 @@ if (!$isOwner && !$isStaff) {
     die('You do not have access to this document.');
 }
 
-$fullPath = APPOINTMENT_DOCS_DIR . '/' . basename($doc['file_path']);
-if (!is_file($fullPath)) {
+$content = supabase_storage_download(basename($doc['file_path']));
+if ($content === null) {
     http_response_code(404);
     die('Document file is missing.');
 }
 
-$ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
-$mimeTypes = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'pdf' => 'application/pdf'];
-$contentType = $mimeTypes[$ext] ?? 'application/octet-stream';
+$ext = strtolower(pathinfo($doc['file_path'], PATHINFO_EXTENSION));
+$contentType = APPOINTMENT_DOCS_MIME_TYPES[$ext] ?? 'application/octet-stream';
 
 header('Content-Type: ' . $contentType);
 header('Content-Disposition: inline; filename="' . basename($doc['original_name'] ?: $doc['file_path']) . '"');
-header('Content-Length: ' . filesize($fullPath));
-readfile($fullPath);
+header('Content-Length: ' . strlen($content));
+echo $content;
