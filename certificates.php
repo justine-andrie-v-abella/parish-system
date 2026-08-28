@@ -18,7 +18,7 @@ ob_start();
     <p class="upcoming-empty">You're all caught up.</p>
   <?php else: ?>
     <?php foreach ($notifications as $n): ?>
-      <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>" data-notif-id="<?php echo $n['id']; ?>" data-appointment-id="<?php echo $n['appointment_id'] ?? ''; ?>">
+      <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>" data-notif-id="<?php echo $n['id']; ?>" data-appointment-id="<?php echo $n['appointment_id'] ?? ''; ?>" data-certificate-id="<?php echo $n['certificate_id'] ?? ''; ?>" data-notif-type="<?php echo htmlspecialchars($n['type'] ?? ''); ?>">
         <span class="notif-dot"></span>
         <div>
           <p><?php echo htmlspecialchars(preg_replace('/^DEMO:\s*/', '', $n['message'])); ?></p>
@@ -88,6 +88,8 @@ require_once 'includes/dashboard-header.php';
   animation: spin .7s linear infinite; flex-shrink:0;
 }
 @keyframes spin{ to{ transform: rotate(360deg); } }
+.row-highlight{ animation: row-flash 1.4s ease-out; }
+@keyframes row-flash{ from{ background: var(--cream-deep); } to{ background: transparent; } }
 </style>
 
 <div class="dash-hero page-hero">

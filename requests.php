@@ -20,7 +20,7 @@ ob_start();
     <p class="upcoming-empty">You're all caught up.</p>
   <?php else: ?>
     <?php foreach ($notifications as $n): ?>
-      <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>" data-notif-id="<?php echo $n['id']; ?>" data-appointment-id="<?php echo $n['appointment_id'] ?? ''; ?>">
+      <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>" data-notif-id="<?php echo $n['id']; ?>" data-appointment-id="<?php echo $n['appointment_id'] ?? ''; ?>" data-certificate-id="<?php echo $n['certificate_id'] ?? ''; ?>" data-notif-type="<?php echo htmlspecialchars($n['type'] ?? ''); ?>">
         <span class="notif-dot"></span>
         <div>
           <p><?php echo htmlspecialchars(preg_replace('/^DEMO:\s*/', '', $n['message'])); ?></p>
@@ -82,6 +82,8 @@ require_once 'includes/dashboard-header.php';
 .qmodal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
 .qmodal-error{ font-size:12px; color:#A2432F; margin-top:6px; display:none; }
 .qmodal-error.show{ display:block; }
+.row-highlight{ animation: row-flash 1.4s ease-out; }
+@keyframes row-flash{ from{ background: var(--cream-deep); } to{ background: transparent; } }
 </style>
 
 <div class="dash-hero page-hero">
@@ -133,7 +135,15 @@ require_once 'includes/dashboard-header.php';
               <?php endif; ?>
             </td>
             <td><span class="status-pill <?php echo htmlspecialchars($r['status']); ?>"><?php echo ucfirst($r['status']); ?></span></td>
-            <td><span class="status-pill <?php echo $r['payment_status'] === 'paid' ? 'completed' : 'pending'; ?>"><?php echo ucfirst($r['payment_status']); ?></span></td>
+            <td>
+              <?php if ($r['payment_status'] === 'unpaid' && $r['payment_method'] === null): ?>
+                <span class="status-pill pending">Awaiting Payment</span>
+              <?php elseif ($r['payment_status'] === 'unpaid'): ?>
+                <span class="status-pill pending">Pending Verification</span>
+              <?php else: ?>
+                <span class="status-pill <?php echo $r['payment_status'] === 'paid' ? 'completed' : 'pending'; ?>"><?php echo ucfirst($r['payment_status']); ?></span>
+              <?php endif; ?>
+            </td>
             <td><?php echo $r['notes'] ? htmlspecialchars($r['notes']) : '<span style="color:var(--ink-soft);">&mdash;</span>'; ?></td>
             <td>
               <?php if ($r['status'] === 'pending'): ?>

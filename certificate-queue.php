@@ -158,7 +158,7 @@ require_once 'includes/dashboard-header.php';
             <td><?php echo htmlspecialchars($r['full_name']); ?></td>
             <td class="svc-cell"><?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?></td>
             <td><?php echo $detailParts ? htmlspecialchars(implode(' · ', $detailParts)) : '<span style="color:var(--ink-soft);">&mdash;</span>'; ?></td>
-            <td><span class="pm-chip <?php echo $r['payment_status']; ?>"><?php echo ucfirst($r['payment_status']); ?></span></td>
+            <td><span class="pm-chip <?php echo $r['payment_status']; ?>"><?php echo $r['payment_status'] === 'unpaid' ? 'Pending Verification' : ucfirst($r['payment_status']); ?></span></td>
             <td>
               <span class="status-pill <?php echo $r['status']; ?>"><?php echo ucfirst($r['status']); ?></span>
               <?php if (in_array($r['status'], ['rejected'], true) && $r['status_reason']): ?>
@@ -168,7 +168,11 @@ require_once 'includes/dashboard-header.php';
             <td>
               <div class="row-actions">
                 <?php if ($r['status'] === 'pending'): ?>
-                  <button type="button" class="approve-btn" data-approve-id="<?php echo $r['id']; ?>">Approve</button>
+                  <?php if ($r['payment_status'] === 'paid'): ?>
+                    <button type="button" class="approve-btn" data-approve-id="<?php echo $r['id']; ?>">Approve</button>
+                  <?php else: ?>
+                    <button type="button" class="approve-btn" disabled title="Payment must be verified by the treasurer first">Approve</button>
+                  <?php endif; ?>
                   <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>">Reject</button>
                   <button type="button" class="docs-btn" data-docs-id="<?php echo $r['id']; ?>">Request Docs</button>
                 <?php elseif ($r['status'] === 'approved'): ?>

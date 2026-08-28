@@ -89,6 +89,7 @@ require_once 'includes/dashboard-header.php';
 .status-pill.no_show{ background:#EEECE7; color:#6B6459; }
 
 .pm-chip{ font-family: var(--font-mono); font-size:10px; letter-spacing:0.5px; text-transform:uppercase; padding:3px 9px; border-radius:999px; }
+.pm-chip.awaiting{ background:#EEECE7; color:#6B6459; }
 .pm-chip.unpaid{ background:#FBF3DE; color:#9C7C1E; }
 .pm-chip.paid{ background:#EAF5EC; color:#2F6B45; }
 .pm-chip.rejected{ background:#FBEAE7; color:#A2432F; }
@@ -180,7 +181,15 @@ require_once 'includes/dashboard-header.php';
                 <?php echo $docsStatus === 'resubmit_requested' ? 'Resubmit Requested' : ucfirst($docsStatus); ?>
               </span>
             </td>
-            <td><span class="pm-chip <?php echo $r['payment_status']; ?>"><?php echo ucfirst($r['payment_status']); ?></span></td>
+            <td>
+              <?php if ($r['payment_status'] === 'unpaid' && $r['payment_method'] === null): ?>
+                <span class="pm-chip awaiting">Awaiting Payment</span>
+              <?php elseif ($r['payment_status'] === 'unpaid'): ?>
+                <span class="pm-chip unpaid">Pending Verification</span>
+              <?php else: ?>
+                <span class="pm-chip <?php echo $r['payment_status']; ?>"><?php echo ucfirst($r['payment_status']); ?></span>
+              <?php endif; ?>
+            </td>
             <td>
               <span class="status-pill <?php echo $r['status']; ?>"><?php echo $r['status'] === 'no_show' ? 'No-show' : ucfirst($r['status']); ?></span>
               <?php if (in_array($r['status'], ['rejected', 'no_show'], true) && $r['status_reason']): ?>
@@ -195,6 +204,8 @@ require_once 'includes/dashboard-header.php';
                 <?php if ($r['status'] === 'pending'): ?>
                   <?php if ($isOverdue): ?>
                     <button type="button" class="approve-btn" disabled title="Date has passed — reschedule before approving">Approve</button>
+                  <?php elseif ($r['payment_status'] !== 'paid'): ?>
+                    <button type="button" class="approve-btn" disabled title="Payment must be verified by the treasurer first">Approve</button>
                   <?php else: ?>
                     <button type="button" class="approve-btn" data-approve-id="<?php echo $r['id']; ?>">Approve</button>
                   <?php endif; ?>
