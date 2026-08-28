@@ -200,4 +200,27 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
   }
+
+  // ---------------- Jump-to-request from a notification click ----------------
+  // requests.php?focus=<id> — scroll to that row and, if it's currently
+  // payable, open the payment modal right away (this is what makes the
+  // "your documents were confirmed" notification take you straight to
+  // payment instead of just landing on the page).
+  var focusId = new URLSearchParams(window.location.search).get('focus');
+  if (focusId) {
+    var focusRow = document.querySelector('tr[data-request-id="' + focusId + '"]');
+    if (focusRow) {
+      focusRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      focusRow.classList.add('row-highlight');
+      setTimeout(function () { focusRow.classList.remove('row-highlight'); }, 3000);
+
+      var payBtn = focusRow.querySelector('[data-pay-btn]');
+      var reuploadBtn = focusRow.querySelector('[data-reupload-btn]');
+      if (payBtn) {
+        payBtn.click();
+      } else if (reuploadBtn) {
+        reuploadBtn.click();
+      }
+    }
+  }
 });

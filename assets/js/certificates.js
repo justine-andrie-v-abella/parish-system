@@ -255,4 +255,15 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
   });
+
+  // ---------------- Jump-to-request from a notification click ----------------
+  var focusId = new URLSearchParams(window.location.search).get('focus');
+  if (focusId) {
+    var focusRow = document.querySelector('tr[data-cert-id="' + focusId + '"]');
+    if (focusRow) {
+      focusRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      focusRow.classList.add('row-highlight');
+      setTimeout(function () { focusRow.classList.remove('row-highlight'); }, 3000);
+    }
+  }
 });

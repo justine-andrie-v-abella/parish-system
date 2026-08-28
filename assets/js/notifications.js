@@ -100,6 +100,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var notifId = item.dataset.notifId;
     var apptId = item.dataset.appointmentId;
+    var certId = item.dataset.certificateId;
+    var notifType = item.dataset.notifType;
 
     if (item.classList.contains('unread')) {
       item.classList.remove('unread');
@@ -110,7 +112,17 @@ document.addEventListener('DOMContentLoaded', function () {
       }).catch(function () {});
     }
 
-    if (apptId) openReschedule(apptId);
+    // 'schedule' notifications are a reschedule proposal — respond to it
+    // right here instead of navigating away. Everything else just takes
+    // you to the relevant request, where the page itself decides what
+    // action (if any) is available right now.
+    if (apptId && notifType === 'schedule') {
+      openReschedule(apptId);
+    } else if (apptId) {
+      window.location.href = 'requests.php?focus=' + encodeURIComponent(apptId);
+    } else if (certId) {
+      window.location.href = 'certificates.php?focus=' + encodeURIComponent(certId);
+    }
   }, true);
 
   closeBtn.addEventListener('click', function () { modal.classList.remove('open'); });
