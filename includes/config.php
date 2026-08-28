@@ -174,3 +174,12 @@ try {
 define('PAYMONGO_SECRET_KEY', getenv('PAYMONGO_SECRET_KEY'));
 define('PAYMONGO_WEBHOOK_SECRET', getenv('PAYMONGO_WEBHOOK_SECRET'));
 define('APP_URL', getenv('APP_URL'));
+
+// Supabase Storage — uploaded appointment document scans (see
+// includes/supabase-storage.php). SUPABASE_URL is the project's API URL
+// (Project Settings → API → Project URL), and SUPABASE_SERVICE_ROLE_KEY is
+// the secret service_role key from that same page (NOT the anon key — this
+// app manages its own sessions rather than Supabase Auth, so server-side
+// requests need the service role to read/write a private bucket).
+define('SUPABASE_URL', rtrim(getenv('SUPABASE_URL') ?: '', '/'));
+define('SUPABASE_SERVICE_ROLE_KEY', getenv('SUPABASE_SERVICE_ROLE_KEY'));
