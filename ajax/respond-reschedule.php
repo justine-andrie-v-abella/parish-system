@@ -5,6 +5,7 @@ require_role(['parishioner', 'secretary', 'priest']);
 require_once '../includes/db.php';
 require_once '../includes/slots.php';
 require_once '../includes/logs.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -73,8 +74,7 @@ try {
         $message = "{$whoActed} confirmed the new date for the {$svcLabel} request: "
             . date('F j, Y', strtotime($appt['proposed_date'])) . ' at ' . format_slot_label($appt['proposed_time']) . '.';
 
-        $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type, appointment_id) VALUES (?, ?, ?, ?)');
-        $notify->execute([$appt['proposed_by'], $message, 'schedule', $id]);
+        notify_user($pdo, $appt['proposed_by'], $message, 'schedule', $id);
 
         $pdo->commit();
         log_activity($pdo, $uid, 'reschedule_accepted', "{$_SESSION['full_name']} confirmed the rescheduled {$svcLabel} request #{$id}.", 'appointment', $id);
@@ -113,8 +113,7 @@ try {
     $message = "{$whoActed} suggested a different date for the {$svcLabel} request: "
         . date('F j, Y', strtotime($date)) . ' at ' . format_slot_label($time) . '. Tap to confirm or suggest another date.';
 
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type, appointment_id) VALUES (?, ?, ?, ?)');
-    $notify->execute([$appt['proposed_by'], $message, 'schedule', $id]);
+    notify_user($pdo, $appt['proposed_by'], $message, 'schedule', $id);
 
     $pdo->commit();
     log_activity($pdo, $uid, 'reschedule_countered', "{$_SESSION['full_name']} countered with a new date for {$svcLabel} request #{$id}.", 'appointment', $id);

@@ -4,6 +4,7 @@ require_once '../includes/config.php';
 require_role(['secretary', 'priest']);
 require_once '../includes/db.php';
 require_once '../includes/logs.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -41,6 +42,12 @@ try {
         echo json_encode(['error' => 'This request is already ' . $cert['status'] . '.']);
         exit;
     }
+    if ($cert['payment_status'] !== 'paid') {
+        $pdo->rollBack();
+        http_response_code(409);
+        echo json_encode(['error' => 'Payment must be verified by the treasurer before this request can be approved.']);
+        exit;
+    }
 
     $update = $pdo->prepare(
         "UPDATE certificate_requests SET status = 'approved', status_reason = NULL, handled_by = ?, handled_at = NOW() WHERE id = ?"
@@ -51,8 +58,7 @@ try {
     $svcLabel = $serviceNames[$cert['service_key']] ?? ucfirst($cert['service_key']);
     $message = "Your {$svcLabel} request has been approved and is being prepared by the parish office.";
 
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)');
-    $notify->execute([$cert['user_id'], $message, 'approved']);
+    notify_user($pdo, $cert['user_id'], $message, 'approved', null, $id);
 
     $pdo->commit();
 

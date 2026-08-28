@@ -4,6 +4,7 @@ require_once '../includes/config.php';
 require_role(['secretary', 'priest']);
 require_once '../includes/db.php';
 require_once '../includes/logs.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -58,8 +59,7 @@ try {
     $message = "Your {$svcLabel} appointment on " . date('F j, Y', strtotime($appt['appointment_date']))
         . ' was marked as a no-show. Please contact the parish office to rebook if this was in error.';
 
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)');
-    $notify->execute([$appt['user_id'], $message, 'no_show']);
+    notify_user($pdo, $appt['user_id'], $message, 'no_show', $id);
 
     $pdo->commit();
 

@@ -4,6 +4,7 @@ require_once '../includes/config.php';
 require_role(['secretary', 'priest']);
 require_once '../includes/db.php';
 require_once '../includes/logs.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -41,6 +42,12 @@ try {
         echo json_encode(['error' => 'This request is already ' . $appt['status'] . '.']);
         exit;
     }
+    if ($appt['payment_status'] !== 'paid') {
+        $pdo->rollBack();
+        http_response_code(409);
+        echo json_encode(['error' => 'Payment must be verified by the treasurer before this request can be approved.']);
+        exit;
+    }
     // A pending request whose date has already passed can't be confirmed
     // as-is — the slot no longer exists. Staff must reschedule it to a
     // valid future date first, then approve.
@@ -61,8 +68,7 @@ try {
     $message = "Your {$svcLabel} request for " . date('F j, Y', strtotime($appt['appointment_date']))
         . ' has been approved and confirmed by the parish office.';
 
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)');
-    $notify->execute([$appt['user_id'], $message, 'approved']);
+    notify_user($pdo, $appt['user_id'], $message, 'approved', $id);
 
     $pdo->commit();
 

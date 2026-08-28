@@ -10,6 +10,7 @@ require_once '../includes/config.php';
 require_role(['parishioner']);
 require_once '../includes/db.php';
 require_once '../includes/paymongo.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -119,8 +120,7 @@ try {
         $message = "Your {$svcLabel} request has been submitted and is pending review. Please settle payment in cash at the parish office.";
     }
 
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message) VALUES (?, ?)');
-    $notify->execute([$uid, $message]);
+    notify_user($pdo, $uid, $message, 'announcement', null, $newId);
 
     $pdo->commit();
 

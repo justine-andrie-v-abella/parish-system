@@ -4,6 +4,7 @@ require_once '../includes/config.php';
 require_role(['secretary', 'priest']);
 require_once '../includes/db.php';
 require_once '../includes/logs.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -47,8 +48,7 @@ $svcLabel = $serviceNames[$cert['service_key']] ?? ucfirst($cert['service_key'])
 $fullMessage = "Please bring the following for your {$svcLabel} request: {$message}. Documents are submitted in person at the parish office.";
 
 try {
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)');
-    $notify->execute([$cert['user_id'], $fullMessage, 'reminder']);
+    notify_user($pdo, $cert['user_id'], $fullMessage, 'reminder', null, $id);
 
     $touch = $pdo->prepare('UPDATE certificate_requests SET handled_by = ?, handled_at = NOW() WHERE id = ?');
     $touch->execute([$staffId, $id]);

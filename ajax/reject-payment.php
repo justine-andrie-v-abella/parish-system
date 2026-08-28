@@ -2,6 +2,7 @@
 require_once '../includes/config.php';
 require_role(['treasurer']);
 require_once '../includes/db.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -66,8 +67,7 @@ try {
     $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key']);
     $message = "Your payment for the {$svcLabel} request could not be verified: {$reason}. Please visit the parish office to resolve this.";
 
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)');
-    $notify->execute([$appt['user_id'], $message, 'payment']);
+    notify_user($pdo, $appt['user_id'], $message, 'payment', $type === 'appointment' ? $id : null, $type === 'certificate' ? $id : null);
 
     $pdo->commit();
 

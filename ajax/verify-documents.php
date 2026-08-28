@@ -4,6 +4,7 @@ require_once '../includes/config.php';
 require_role(['secretary', 'priest']);
 require_once '../includes/db.php';
 require_once '../includes/logs.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -53,8 +54,7 @@ try {
     $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key']);
     $message = "Your documents for the {$svcLabel} request have been confirmed. You may now proceed to payment.";
 
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)');
-    $notify->execute([$appt['user_id'], $message, 'approved']);
+    notify_user($pdo, $appt['user_id'], $message, 'approved', $id);
 
     $pdo->commit();
 

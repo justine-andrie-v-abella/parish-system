@@ -5,6 +5,7 @@ require_role(['secretary', 'priest']);
 require_once '../includes/db.php';
 require_once '../includes/slots.php';
 require_once '../includes/logs.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -82,8 +83,7 @@ try {
     $message = "The office proposed moving your {$svcLabel} request from " . date('F j, Y', strtotime($oldDate))
         . ' to ' . date('F j, Y', strtotime($date)) . ' at ' . format_slot_label($time) . '. Tap to confirm or suggest another date.';
 
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type, appointment_id) VALUES (?, ?, ?, ?)');
-    $notify->execute([$appt['user_id'], $message, 'schedule', $id]);
+    notify_user($pdo, $appt['user_id'], $message, 'schedule', $id);
 
     $pdo->commit();
 

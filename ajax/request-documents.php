@@ -3,6 +3,7 @@ require_once '../includes/config.php';
 require_role(['secretary', 'priest']);
 require_once '../includes/db.php';
 require_once '../includes/logs.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -46,8 +47,7 @@ $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key'])
 $fullMessage = "Please bring the following for your {$svcLabel} request: {$message}. Documents are submitted in person at the parish office.";
 
 try {
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)');
-    $notify->execute([$appt['user_id'], $fullMessage, 'reminder']);
+    notify_user($pdo, $appt['user_id'], $fullMessage, 'reminder', $id);
 
     $touch = $pdo->prepare('UPDATE appointments SET handled_by = ?, handled_at = NOW() WHERE id = ?');
     $touch->execute([$secretaryId, $id]);

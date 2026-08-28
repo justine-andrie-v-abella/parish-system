@@ -4,6 +4,7 @@ require_once '../includes/config.php';
 require_role(['secretary', 'priest']);
 require_once '../includes/db.php';
 require_once '../includes/logs.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -60,8 +61,7 @@ try {
     $message = "Your {$svcLabel} on " . date('F j, Y', strtotime($appt['appointment_date']))
         . ' has been marked as completed. Thank you.';
 
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)');
-    $notify->execute([$appt['user_id'], $message, 'completed']);
+    notify_user($pdo, $appt['user_id'], $message, 'completed', $id);
 
     $pdo->commit();
 

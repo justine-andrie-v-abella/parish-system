@@ -7,6 +7,7 @@ require_once '../includes/config.php';
 require_role(['parishioner']);
 require_once '../includes/db.php';
 require_once '../includes/paymongo.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -97,8 +98,7 @@ try {
         $message = "Please settle payment in cash at the parish office for your {$svcLabel} request.";
     }
 
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message) VALUES (?, ?)');
-    $notify->execute([$uid, $message]);
+    notify_user($pdo, $uid, $message, 'payment', $id);
 
     $pdo->commit();
 

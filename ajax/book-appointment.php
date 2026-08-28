@@ -4,6 +4,7 @@ require_once '../includes/config.php';
 require_role(['parishioner']);
 require_once '../includes/db.php';
 require_once '../includes/uploads.php';
+require_once '../includes/notifications.php';
 
 header('Content-Type: application/json');
 
@@ -226,8 +227,7 @@ try {
         ? "Your {$svcLabel} request for {$whenLabel} has been submitted. The parish office will review your documents before payment."
         : "Your {$svcLabel} request for {$whenLabel} has been submitted. You may now proceed to payment under View Requests.";
 
-    $notify = $pdo->prepare('INSERT INTO notifications (user_id, message) VALUES (?, ?)');
-    $notify->execute([$uid, $message]);
+    notify_user($pdo, $uid, $message, 'announcement', $newId);
 
     $pdo->commit();
 
