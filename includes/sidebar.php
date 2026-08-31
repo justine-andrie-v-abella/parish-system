@@ -53,6 +53,18 @@ $sidebarLinksByRole = [
 $sidebarLinks = $sidebarLinksByRole[$role] ?? [];
 ?>
 <aside class="dash-sidebar" id="dashSidebar">
+  <script>
+    // Inline + synchronous so the collapsed width applies before first
+    // paint — a deferred script here would show a flash of the full-width
+    // sidebar snapping to collapsed a moment later.
+    (function () {
+      try {
+        if (localStorage.getItem('sidebarCollapsed') === '1' && window.innerWidth > 860) {
+          document.getElementById('dashSidebar').classList.add('collapsed');
+        }
+      } catch (e) {}
+    })();
+  </script>
   <div class="sidebar-mobile-head">
     <span>Menu</span>
     <button type="button" class="sidebar-close" id="sidebarClose" aria-label="Close menu">&times;</button>
@@ -64,13 +76,16 @@ $sidebarLinks = $sidebarLinksByRole[$role] ?? [];
       <span class="dash-username"><?php echo htmlspecialchars($fullName); ?></span>
       <span class="dash-role-badge <?php echo htmlspecialchars($role); ?>"><?php echo htmlspecialchars(ucfirst($role)); ?></span>
     </div>
+    <button type="button" class="sidebar-collapse-btn" id="sidebarCollapseBtn" aria-label="Collapse sidebar" aria-expanded="true" title="Collapse sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>
   </div>
 
   <nav class="sidebar-nav">
     <?php foreach ($sidebarLinks as $link):
         $isActive = in_array($current, $link['match'], true);
     ?>
-      <a href="<?php echo htmlspecialchars($link['href']); ?>" class="sidebar-link<?php echo $isActive ? ' active' : ''; ?>">
+      <a href="<?php echo htmlspecialchars($link['href']); ?>" class="sidebar-link<?php echo $isActive ? ' active' : ''; ?>" data-tooltip="<?php echo htmlspecialchars($link['label']); ?>">
         <span class="sidebar-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><?php echo $link['icon']; ?></svg>
         </span>
@@ -80,6 +95,9 @@ $sidebarLinks = $sidebarLinksByRole[$role] ?? [];
   </nav>
 
   <div class="sidebar-footer">
-    <a href="logout.php" class="btn btn-outline btn-sm sidebar-logout">Log out</a>
+    <a href="logout.php" class="btn btn-outline btn-sm sidebar-logout" data-tooltip="Log out">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      <span>Log out</span>
+    </a>
   </div>
 </aside>
