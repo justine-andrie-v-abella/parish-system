@@ -41,7 +41,8 @@ $year  = isset($_GET['year'])  ? (int) $_GET['year'] : (int) date('Y');
 $calendarPanelHtml = render_calendar_fragment($pdo, $month, $year);
 
 // ---------------- Filter ----------------
-$allowedFilters = ['all', 'pending', 'paid', 'rejected', 'cash', 'gcash'];
+$filterLabels = ['pending' => 'Pending', 'paid' => 'Paid', 'rejected' => 'Rejected', 'cash' => 'Cash', 'gcash' => 'GCash', 'all' => 'All'];
+$allowedFilters = array_keys($filterLabels);
 $filter = in_array($_GET['filter'] ?? 'pending', $allowedFilters, true) ? ($_GET['filter'] ?? 'pending') : 'pending';
 
 $where = '1=1';
@@ -81,31 +82,6 @@ require_once 'includes/dashboard-header.php';
 ?>
 
 <style>
-.filter-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:22px; }
-.filter-chip{
-  font-family: var(--font-mono); font-size:11px; letter-spacing:0.5px; text-transform:uppercase;
-  padding:8px 16px; border-radius:999px; border:1px solid var(--line); color: var(--ink-soft); background: var(--white);
-}
-.filter-chip.active{ background: var(--navy); border-color: var(--navy); color:#fff; font-weight:600; }
-
-.pm-chip{ font-family: var(--font-mono); font-size:10px; letter-spacing:0.5px; text-transform:uppercase; padding:3px 9px; border-radius:999px; }
-.pm-chip.cash{ background:#EAF5EC; color:#2F6B45; }
-.pm-chip.gcash{ background:#E6ECFA; color:#33488A; }
-
-.pay-status{ font-family: var(--font-mono); font-size:10px; letter-spacing:0.5px; text-transform:uppercase; padding:3px 10px; border-radius:999px; }
-.pay-status.unpaid{ background:#FBF3DE; color:#9C7C1E; }
-.pay-status.paid{ background:#EAF5EC; color:#2F6B45; }
-.pay-status.rejected{ background:#FBEAE7; color:#A2432F; }
-
-.row-actions{ display:flex; gap:6px; flex-wrap:wrap; }
-.row-actions button, .row-actions a{
-  font-family: var(--font-mono); font-size:10.5px; letter-spacing:0.5px; text-transform:uppercase;
-  padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:var(--white); color:var(--navy);
-}
-.row-actions .verify-btn{ border-color: var(--gold); color:var(--navy); }
-.row-actions .verify-btn:hover{ background: var(--cream-deep); }
-.row-actions .reject-btn{ border-color:#E9C8C0; color:#A2432F; }
-.row-actions .reject-btn:hover{ background:#FBEAE7; }
 .screenshot-link{ font-size:11.5px; color: var(--gold-dim); text-decoration:underline; }
 
 .reject-modal-overlay{
@@ -141,10 +117,16 @@ require_once 'includes/dashboard-header.php';
   <p>Review submitted payments, verify GCash proofs against reference numbers, and confirm cash collected at the office.</p>
 </div>
 
-<div class="filter-row">
-  <?php foreach (['pending' => 'Pending', 'paid' => 'Paid', 'rejected' => 'Rejected', 'cash' => 'Cash', 'gcash' => 'GCash', 'all' => 'All'] as $key => $label): ?>
-    <a href="?filter=<?php echo $key; ?>" class="filter-chip<?php echo $filter === $key ? ' active' : ''; ?>"><?php echo $label; ?></a>
-  <?php endforeach; ?>
+<div class="actions-dropdown" style="margin-bottom:22px;">
+  <button type="button" class="actions-trigger" aria-haspopup="true" aria-expanded="false">
+    Filter: <strong><?php echo htmlspecialchars($filterLabels[$filter] ?? ucfirst($filter)); ?></strong>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
+  <div class="actions-menu">
+    <?php foreach ($filterLabels as $key => $label): ?>
+      <a href="?filter=<?php echo $key; ?>"<?php echo $filter === $key ? ' class="active"' : ''; ?>><?php echo $label; ?></a>
+    <?php endforeach; ?>
+  </div>
 </div>
 
 <div class="requests-table-wrap">
@@ -185,32 +167,38 @@ require_once 'includes/dashboard-header.php';
               <?php endif; ?>
             </td>
             <td>
-              <span class="pay-status <?php echo $r['payment_status']; ?>"><?php echo ucfirst($r['payment_status']); ?></span>
+              <span class="pay-status-chip <?php echo $r['payment_status']; ?>"><?php echo ucfirst($r['payment_status']); ?></span>
               <?php if ($r['payment_status'] === 'rejected' && $r['rejection_reason']): ?>
                 <div style="font-size:11px; color:var(--ink-soft); margin-top:4px; max-width:180px;"><?php echo htmlspecialchars($r['rejection_reason']); ?></div>
               <?php endif; ?>
             </td>
             <td>
-              <div class="row-actions">
-                <?php if ($r['payment_status'] === 'unpaid'): ?>
-                  <button type="button" class="verify-btn"
-                  data-verify-id="<?php echo $r['id']; ?>"
-                  data-type="<?php echo $isCert ? 'certificate' : 'appointment'; ?>"
-                  data-parishioner="<?php echo htmlspecialchars($r['full_name']); ?>"
-                  data-service="<?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?>"
-                  data-amount="<?php echo number_format(payment_amount($r['service_key'], $feeMap)); ?>"
-                  data-method="<?php echo htmlspecialchars($r['payment_method'] ?? ''); ?>"
-                  data-reference="<?php echo htmlspecialchars($r['reference_number'] ?? ''); ?>"
-                  data-screenshot="<?php echo htmlspecialchars($r['payment_screenshot'] ?? ''); ?>"
-                  data-date="<?php echo htmlspecialchars($detail); ?>"
-                  data-suggested-receipt="<?php echo htmlspecialchars(generate_receipt_number($r['id'])); ?>">View &amp; Verify</button>
-                  <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>" data-type="<?php echo $isCert ? 'certificate' : 'appointment'; ?>">Reject</button>
-                <?php elseif ($r['payment_status'] === 'paid'): ?>
-                  <a href="receipt.php?id=<?php echo $r['id']; ?>&type=<?php echo $isCert ? 'certificate' : 'appointment'; ?>" target="_blank">Receipt</a>
-                <?php else: ?>
-                  <span style="font-size:11px; color:var(--ink-soft);">—</span>
-                <?php endif; ?>
-              </div>
+              <?php if ($r['payment_status'] === 'unpaid'): ?>
+                <div class="actions-dropdown">
+                  <button type="button" class="actions-trigger" aria-haspopup="true" aria-expanded="false">
+                    Actions
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                  </button>
+                  <div class="actions-menu">
+                    <button type="button" class="verify-btn"
+                    data-verify-id="<?php echo $r['id']; ?>"
+                    data-type="<?php echo $isCert ? 'certificate' : 'appointment'; ?>"
+                    data-parishioner="<?php echo htmlspecialchars($r['full_name']); ?>"
+                    data-service="<?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?>"
+                    data-amount="<?php echo number_format(payment_amount($r['service_key'], $feeMap)); ?>"
+                    data-method="<?php echo htmlspecialchars($r['payment_method'] ?? ''); ?>"
+                    data-reference="<?php echo htmlspecialchars($r['reference_number'] ?? ''); ?>"
+                    data-screenshot="<?php echo htmlspecialchars($r['payment_screenshot'] ?? ''); ?>"
+                    data-date="<?php echo htmlspecialchars($detail); ?>"
+                    data-suggested-receipt="<?php echo htmlspecialchars(generate_receipt_number($r['id'])); ?>">View &amp; Verify</button>
+                    <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>" data-type="<?php echo $isCert ? 'certificate' : 'appointment'; ?>">Reject</button>
+                  </div>
+                </div>
+              <?php elseif ($r['payment_status'] === 'paid'): ?>
+                <a href="receipt.php?id=<?php echo $r['id']; ?>&type=<?php echo $isCert ? 'certificate' : 'appointment'; ?>" target="_blank" class="btn btn-outline btn-sm">Receipt</a>
+              <?php else: ?>
+                <span style="font-size:11px; color:var(--ink-soft);">—</span>
+              <?php endif; ?>
             </td>
           </tr>
         <?php endforeach; ?>

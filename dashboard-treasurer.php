@@ -110,43 +110,37 @@ $page_title = 'Treasurer Dashboard — ' . $parish['name'];
 require_once 'includes/dashboard-header.php';
 ?>
 
-<style>
-/* Scoped to the treasurer dashboard — safe to move into dashboard.css later. */
-.chart-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px; }
-@media (max-width:900px){ .chart-grid{ grid-template-columns:1fr; } }
-.chart-bars{ display:flex; align-items:flex-end; gap:8px; height:140px; margin-top:8px; }
-.chart-bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:6px; }
-.chart-bar{ width:100%; max-width:34px; background: linear-gradient(180deg, var(--gold-bright), var(--gold)); border-radius:6px 6px 2px 2px; min-height:2px; }
-.chart-bar-label{ font-family: var(--font-mono); font-size:9.5px; color: var(--ink-soft); text-align:center; }
-.chart-bar-value{ font-family: var(--font-mono); font-size:9px; color: var(--navy); }
-
-.svc-bar-row{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-.svc-bar-label{ width:120px; flex-shrink:0; font-size:12.5px; color: var(--ink-soft); }
-.svc-bar-track{ flex:1; background: var(--cream-deep); border-radius:999px; height:10px; overflow:hidden; }
-.svc-bar-fill{ height:100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); border-radius:999px; }
-.svc-bar-amount{ width:70px; text-align:right; font-family: var(--font-mono); font-size:11.5px; color:var(--navy); }
-
-.queue-table{ width:100%; border-collapse:collapse; }
-.queue-table th{ text-align:left; font-family: var(--font-mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); padding:10px 12px; border-bottom:1px solid var(--line); }
-.queue-table td{ padding:12px; border-bottom:1px dashed var(--line); font-size:13px; }
-.queue-table tr:last-child td{ border-bottom:none; }
-.pm-chip{ font-family: var(--font-mono); font-size:10px; letter-spacing:0.5px; text-transform:uppercase; padding:3px 9px; border-radius:999px; }
-.pm-chip.cash{ background:#EAF5EC; color:#2F6B45; }
-.pm-chip.gcash{ background:#E6ECFA; color:#33488A; }
-</style>
-
 <div class="dash-hero">
   <span class="eyebrow" style="color:var(--gold-bright);">Payments &amp; Fees</span>
   <h1>Peace be with you, <?php echo htmlspecialchars(explode(' ', $_SESSION['full_name'])[0]); ?>.</h1>
   <p>Here's today's collections, what's still waiting on verification, and how revenue has trended.</p>
 </div>
 
+<div class="quick-links-row">
+  <a href="payments.php" class="quick-link-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Payment Verification</a>
+</div>
+
 <div class="summary-grid">
-  <div class="summary-card"><span class="num">₱<?php echo number_format($todayTotal); ?></span><span class="lbl">Today's Payments</span></div>
-  <div class="summary-card accent-pending"><span class="num"><?php echo $pendingCount; ?></span><span class="lbl">Pending Payments</span></div>
-  <div class="summary-card accent-completed"><span class="num">₱<?php echo number_format($todayCash); ?></span><span class="lbl">Cash Today</span></div>
-  <div class="summary-card accent-scheduled"><span class="num">₱<?php echo number_format($todayGcash); ?></span><span class="lbl">GCash Today</span></div>
-  <div class="summary-card"><span class="num">₱<?php echo number_format($allTimeTotal); ?></span><span class="lbl">Revenue Summary</span></div>
+  <div class="summary-card">
+    <span class="summary-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+    <span class="num">₱<?php echo number_format($todayTotal); ?></span><span class="lbl">Today's Payments</span>
+  </div>
+  <div class="summary-card accent-pending">
+    <span class="summary-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
+    <span class="num"><?php echo $pendingCount; ?></span><span class="lbl">Pending Payments</span>
+  </div>
+  <div class="summary-card accent-completed">
+    <span class="summary-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg></span>
+    <span class="num">₱<?php echo number_format($todayCash); ?></span><span class="lbl">Cash Today</span>
+  </div>
+  <div class="summary-card accent-scheduled">
+    <span class="summary-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg></span>
+    <span class="num">₱<?php echo number_format($todayGcash); ?></span><span class="lbl">GCash Today</span>
+  </div>
+  <div class="summary-card">
+    <span class="summary-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+    <span class="num">₱<?php echo number_format($allTimeTotal); ?></span><span class="lbl">Revenue Summary</span>
+  </div>
 </div>
 
 <div class="panel" style="margin-bottom:32px;">
@@ -157,20 +151,22 @@ require_once 'includes/dashboard-header.php';
   <?php if (empty($queue)): ?>
     <p class="upcoming-empty">Nothing waiting on verification right now.</p>
   <?php else: ?>
-    <table class="queue-table">
-      <thead><tr><th>Parishioner</th><th>Service</th><th>Amount</th><th>Method</th><th>Reference</th></tr></thead>
-      <tbody>
-        <?php foreach ($queue as $q): ?>
-          <tr>
-            <td><?php echo htmlspecialchars($q['full_name']); ?></td>
-            <td><?php echo htmlspecialchars($serviceNames[$q['service_key']] ?? ucfirst($q['service_key'])); ?></td>
-            <td>₱<?php echo number_format(payment_amount($q['service_key'], $feeMap)); ?></td>
-            <td><?php if ($q['payment_method']): ?><span class="pm-chip <?php echo $q['payment_method']; ?>"><?php echo strtoupper($q['payment_method']); ?></span><?php else: ?>—<?php endif; ?></td>
-            <td><?php echo $q['reference_number'] ? htmlspecialchars($q['reference_number']) : '—'; ?></td>
-          </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
+    <div class="mini-table-wrap">
+      <table>
+        <thead><tr><th>Parishioner</th><th>Service</th><th>Amount</th><th>Method</th><th>Reference</th></tr></thead>
+        <tbody>
+          <?php foreach ($queue as $q): ?>
+            <tr>
+              <td data-label="Parishioner"><?php echo htmlspecialchars($q['full_name']); ?></td>
+              <td data-label="Service"><?php echo htmlspecialchars($serviceNames[$q['service_key']] ?? ucfirst($q['service_key'])); ?></td>
+              <td data-label="Amount">₱<?php echo number_format(payment_amount($q['service_key'], $feeMap)); ?></td>
+              <td data-label="Method"><?php if ($q['payment_method']): ?><span class="pm-chip <?php echo $q['payment_method']; ?>"><?php echo strtoupper($q['payment_method']); ?></span><?php else: ?>—<?php endif; ?></td>
+              <td data-label="Reference"><?php echo $q['reference_number'] ? htmlspecialchars($q['reference_number']) : '—'; ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
   <?php endif; ?>
 </div>
 
