@@ -10,6 +10,14 @@ foreach (explode(' ', $_SESSION['full_name'] ?? '') as $part) {
 }
 $initials = substr($initials, 0, 2);
 
+// Every page already sets $page_title as "Something — {$parish['name']}"
+// for the <title> tag — reuse that same string for the topbar's visible
+// page heading instead of introducing a second thing every page has to set.
+$topbarTitle = '';
+if (!empty($page_title)) {
+    $topbarTitle = trim(explode('—', $page_title)[0]);
+}
+
 // Roles that get the left sidebar. Extend this list as each role's
 // section (Priest, Secretary) gets its own pages built out.
 $sidebarRoles = ['parishioner', 'treasurer', 'secretary', 'priest'];
@@ -24,8 +32,9 @@ $hasSidebar = in_array($_SESSION['role'] ?? '', $sidebarRoles, true);
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Jost:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
-<link rel="stylesheet" href="assets/css/dashboard.css?v=9">
-<link rel="stylesheet" href="assets/css/dashboard-sidebar.css?v=9">
+<link rel="stylesheet" href="assets/css/dashboard.css?v=10">
+<link rel="stylesheet" href="assets/css/dashboard-sidebar.css?v=10">
+<link rel="stylesheet" href="assets/css/dashboard-components.css?v=1">
 
 <style>
 .dp-tabs{ position:relative; display:flex; background:var(--cream-deep,#f4ede0); border-radius:10px; padding:3px; margin-bottom:12px; }
@@ -94,9 +103,15 @@ document.addEventListener('DOMContentLoaded', function () {
         <svg width="32" height="32" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="23" fill="#16223F"/><circle cx="24" cy="24" r="23" stroke="#C6A15B" stroke-width="1"/><path d="M24 10V38M14 18H34M24 10C20 14 20 18 24 21C28 18 28 14 24 10Z" stroke="#E7C883" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span><strong><?php echo htmlspecialchars($parish['name']); ?></strong><span>Management System</span></span>
       </div>
+      <?php if ($topbarTitle !== ''): ?>
+        <div class="dash-breadcrumb">
+          <span class="crumb-sep">/</span>
+          <span class="crumb-current"><?php echo htmlspecialchars($topbarTitle); ?></span>
+        </div>
+      <?php endif; ?>
     </div>
     <div class="dash-user">
-      <?php if (isset($calendarPanelHtml) || isset($notifPanelHtml)): ?>
+      <?php if (isset($calendarPanelHtml) || isset($notifPanelHtml) || $hasSidebar): ?>
         <div class="header-tools">
           <?php if (isset($calendarPanelHtml)): ?>
             <div class="dropdown-wrap">
@@ -129,6 +144,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 <?php else: ?>
                   <?php echo $notifPanelHtml; ?>
                 <?php endif; ?>
+              </div>
+            </div>
+          <?php endif; ?>
+
+          <?php if ($hasSidebar): ?>
+            <div class="dropdown-wrap">
+              <button type="button" class="icon-btn profile-btn" data-dropdown-toggle="profile" aria-haspopup="true" aria-expanded="false" aria-label="Open profile menu">
+                <span class="profile-avatar"><?php echo htmlspecialchars($initials); ?></span>
+              </button>
+              <div class="dropdown-panel dp-profile" data-dropdown="profile">
+                <div class="dp-profile-head">
+                  <span class="profile-avatar profile-avatar-lg"><?php echo htmlspecialchars($initials); ?></span>
+                  <div>
+                    <span class="dp-profile-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? ''); ?></span>
+                    <span class="dash-role-badge <?php echo htmlspecialchars($_SESSION['role'] ?? ''); ?>"><?php echo htmlspecialchars(ucfirst($_SESSION['role'] ?? '')); ?></span>
+                  </div>
+                </div>
+                <a href="logout.php" class="dp-profile-logout">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+                  Log out
+                </a>
               </div>
             </div>
           <?php endif; ?>
@@ -169,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
   </div>
 </div>
 <script>var PMS_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';</script>
-<script src="<?php echo $hasSidebar ? '' : ''; ?>assets/js/notifications.js"></script>
+<script src="assets/js/notifications.js"></script>
 
 <div class="dash-shell">
   <?php if ($hasSidebar): ?>
