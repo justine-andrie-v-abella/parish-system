@@ -14,10 +14,10 @@
   padding-left: clamp(20px, 3vw, 44px);
   padding-right: clamp(20px, 3vw, 44px);
 }
-.dash-topbar-left{ display:flex; align-items:center; gap:14px; }
+.dash-topbar-left{ display:flex; align-items:center; gap:14px; min-width:0; flex-shrink:1; }
 
 .dash-shell{
-  display:flex; align-items:flex-start;
+  display:block;
   max-width: none;
   width: 100%;
   margin: 0;
@@ -25,28 +25,41 @@
 }
 
 .dash-shell .dash-main{
-  flex:1; min-width:0; max-width:none; margin:0;
+  min-width:0; max-width:none; margin:0 0 0 232px;
   padding: 40px clamp(20px, 3vw, 44px) 80px;
+  transition: margin-left .22s var(--ease);
 }
 
-/* ---------------- Sidebar (desktop: static column) ----------------
-   Given its own solid panel color so it reads clearly as a distinct
-   navigation surface rather than blending into the page background. */
+/* ---------------- Sidebar (desktop: fixed full-height column) ----------------
+   Pinned to the viewport for its entire height so it never scrolls away
+   with the page — only its own nav list scrolls internally, and only if
+   the link list is ever taller than the available space. Given its own
+   solid panel color so it reads clearly as a distinct navigation surface
+   rather than blending into the page background. */
 .dash-sidebar{
-  width: 232px; flex-shrink:0; position: sticky; top: 78px;
-  align-self: stretch;
-  min-height: calc(100vh - 78px);
+  width: 232px; flex-shrink:0;
+  position: fixed; top: 78px; left:0;
+  height: calc(100vh - 78px);
   background: var(--navy);
   border-radius: 0;
-  padding: 32px 0 32px clamp(18px, 2.4vw, 28px);
+  padding: 24px 0 20px clamp(18px, 2.4vw, 28px);
   color: var(--cream);
+  z-index: 150;
+  display:flex; flex-direction:column;
+  transition: width .22s var(--ease);
 }
 .sidebar-mobile-head{ display:none; } /* desktop: hidden, shown only in the drawer */
-.sidebar-nav{ display:flex; flex-direction:column; gap:4px; padding-right: clamp(18px, 2.4vw, 28px); }
+.sidebar-nav{
+  display:flex; flex-direction:column; gap:4px;
+  padding-right: clamp(18px, 2.4vw, 28px);
+  flex:1; overflow-y:auto; overflow-x:hidden;
+  min-height:0; /* lets flex:1 actually shrink + scroll instead of pushing the footer off */
+}
 .sidebar-link{
   display:flex; align-items:center; gap:12px; padding: 11px 14px;
   border-radius: 10px; font-size:14px; color: rgba(250,246,238,0.68); font-weight:500;
   border: 1px solid transparent; transition: all .18s;
+  position: relative; white-space:nowrap;
 }
 .sidebar-link:hover{ background: rgba(250,246,238,0.08); color: #fff; }
 .sidebar-link.active{
@@ -56,6 +69,51 @@
 .sidebar-icon{ width:20px; height:20px; flex-shrink:0; color: var(--gold-dim); display:flex; }
 .sidebar-icon svg{ width:100%; height:100%; }
 .sidebar-link.active .sidebar-icon{ color: var(--navy-deep); }
+
+/* ---------------- Collapse / expand (desktop only) ----------------
+   Sits inline in the user row (not floating on the sidebar's edge, which
+   read as a half-clipped stray button against the page background). */
+.sidebar-collapse-btn{
+  display:flex; align-items:center; justify-content:center;
+  width:26px; height:26px; border-radius:50%; border:1px solid rgba(250,246,238,0.25);
+  background: rgba(250,246,238,0.06); color: rgba(250,246,238,0.85);
+  flex-shrink:0; margin-left:auto;
+  transition: all .18s;
+}
+.sidebar-collapse-btn:hover{ background: var(--gold); border-color: var(--gold); color: var(--navy-deep); }
+.sidebar-collapse-btn svg{ width:13px; height:13px; transition: transform .22s var(--ease); }
+
+#dashSidebar.collapsed{ width:76px; }
+#dashSidebar.collapsed ~ .dash-main{ margin-left:76px; }
+#dashSidebar.collapsed .sidebar-collapse-btn svg{ transform: rotate(180deg); }
+/* Collapsed: the user block shrinks to just the toggle button — avatar and
+   name/role text both hide, so there's nothing fighting the button for
+   space in the narrow rail. */
+#dashSidebar.collapsed .sidebar-user-info,
+#dashSidebar.collapsed .sidebar-user .dash-avatar,
+#dashSidebar.collapsed .sidebar-link span:last-child,
+#dashSidebar.collapsed .sidebar-footer .btn span:last-child{ display:none; }
+#dashSidebar.collapsed .sidebar-user{ justify-content:center; padding-right:0; }
+#dashSidebar.collapsed .sidebar-collapse-btn{ margin-left:0; }
+#dashSidebar.collapsed .sidebar-nav{ padding-right:0; align-items:center; }
+#dashSidebar.collapsed .sidebar-link{ justify-content:center; padding:11px; width:44px; }
+#dashSidebar.collapsed .sidebar-footer{ padding-right:0; display:flex; justify-content:center; }
+#dashSidebar.collapsed .sidebar-logout{ width:44px; height:44px; padding:0; border-radius:50%; }
+
+/* Tooltip on hover, collapsed state only — supplements the native title
+   attribute with something that actually matches the design. */
+#dashSidebar.collapsed .sidebar-link,
+#dashSidebar.collapsed .sidebar-footer .btn{ position:relative; }
+#dashSidebar.collapsed .sidebar-link::after,
+#dashSidebar.collapsed .sidebar-footer .btn::after{
+  content: attr(data-tooltip);
+  position:absolute; left: calc(100% + 14px); top:50%; transform: translateY(-50%) translateX(-6px);
+  background: var(--navy-deep); color:#fff; font-size:12.5px; font-weight:500; white-space:nowrap;
+  padding:7px 12px; border-radius:8px; box-shadow: var(--shadow-lift);
+  opacity:0; pointer-events:none; transition: opacity .15s, transform .15s; z-index:20;
+}
+#dashSidebar.collapsed .sidebar-link:hover::after,
+#dashSidebar.collapsed .sidebar-footer .btn:hover::after{ opacity:1; transform: translateY(-50%) translateX(0); }
 
 /* ---------------- Mobile hamburger toggle + overlay (hidden on desktop) ---------------- */
 .sidebar-toggle{
@@ -73,11 +131,10 @@
 }
 .sidebar-overlay.open{ opacity:1; pointer-events:auto; }
 
-/* ---------------- Fluid grids (override dashboard.css fixed column counts) ---------------- */
+/* ---------------- Fluid grids (override dashboard.css fixed column counts) ----------------
+   .summary-grid's own responsive column rule now lives in
+   dashboard-components.css (single source of truth). */
 .dash-hero{ width:100%; }
-.summary-grid{
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-}
 .quick-actions{
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
@@ -200,8 +257,10 @@
   border-bottom: 1px solid rgba(250,246,238,0.14);
 }
 .sidebar-user .dash-avatar{
+  width:38px; height:38px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
   background: var(--gold); color: var(--navy-deep);
-  border: none; font-weight:700;
+  border: none; font-weight:700; font-family: var(--font-mono); font-size:13px;
 }
 .sidebar-user-info{ display:flex; flex-direction:column; gap:6px; min-width:0; }
 .sidebar-user-info .dash-username{
@@ -234,9 +293,10 @@
   .sidebar-overlay{ display:block; }
 
   .dash-shell{ display:block; } /* sidebar is now position:fixed, out of flow */
-  .dash-shell .dash-main{ padding: 24px clamp(16px, 4vw, 32px) 70px; }
+  .dash-shell .dash-main{ padding: 24px clamp(16px, 4vw, 32px) 70px; margin-left:0; }
+  #dashSidebar.collapsed ~ .dash-main{ margin-left:0; } /* a collapsed desktop preference never affects the mobile drawer layout */
 
-  .dash-sidebar{
+  .dash-sidebar, #dashSidebar.collapsed{
     position: fixed; top:0; left:0; height:100vh; min-height:0; width: 260px; max-width: 78vw;
     background: var(--navy); z-index: 1001;
     border-radius: 0;
@@ -247,6 +307,24 @@
     overflow-y: auto;
   }
   .dash-sidebar.open{ transform: translateX(0); }
+
+  /* Collapse-to-icons is a desktop-only affordance — the off-canvas drawer
+     already fully hides/shows, so show the drawer at full width/detail
+     regardless of any collapsed preference carried over from desktop. */
+  .sidebar-collapse-btn{ display:none; }
+  /* Restore each element's own real display value — "initial" would reset
+     to CSS's generic default (inline), not the flex layout these actually
+     need, which broke the name/badge stacking here previously. */
+  #dashSidebar.collapsed .sidebar-user-info{ display:flex; }
+  #dashSidebar.collapsed .sidebar-user .dash-avatar{ display:flex; }
+  #dashSidebar.collapsed .sidebar-link span:last-child,
+  #dashSidebar.collapsed .sidebar-footer .btn span:last-child{ display:inline; }
+  #dashSidebar.collapsed .sidebar-user{ justify-content:flex-start; }
+  #dashSidebar.collapsed .sidebar-nav{ align-items:stretch; }
+  #dashSidebar.collapsed .sidebar-link{ justify-content:flex-start; width:auto; }
+  #dashSidebar.collapsed .sidebar-link::after{ display:none; }
+  #dashSidebar.collapsed .sidebar-footer{ display:block; }
+  #dashSidebar.collapsed .sidebar-logout{ width:100%; height:auto; border-radius:999px; padding:8px 16px; }
 
   .sidebar-mobile-head{
     display:flex; align-items:center; justify-content:space-between;

@@ -120,35 +120,13 @@
 .dash-card p{ font-size:12.5px; color:var(--ink-soft); margin:0; }
 .dash-card .soon-tag{ display:inline-block; margin-top:10px; font-family: var(--font-mono); font-size:9.5px; letter-spacing:1px; text-transform:uppercase; color:var(--brown); }
 
-/* ---------------- Summary cards ---------------- */
-.summary-grid{ display:grid; grid-template-columns: repeat(5,1fr); gap:16px; margin-bottom:40px; }
-@media (max-width:1000px){ .summary-grid{ grid-template-columns: repeat(3,1fr); } }
-@media (max-width:620px){ .summary-grid{ grid-template-columns: repeat(2,1fr); } }
-
-.summary-card{
-  background: var(--white); border:1px solid var(--line); border-radius: var(--arch-sm);
-  padding: 20px 18px; transition: transform .2s, box-shadow .2s;
-  border-top: 3px solid var(--gold);
-}
-.summary-card:hover{ transform: translateY(-3px); box-shadow: var(--shadow-soft); }
-.summary-card .num{ font-family: var(--font-display); font-size:32px; color:var(--navy); font-weight:700; line-height:1; }
-.summary-card .lbl{ font-family: var(--font-mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; color: var(--ink-soft); margin-top:8px; display:block; }
-.summary-card.accent-pending{ border-top-color:#C9891F; }
-.summary-card.accent-pending .num{ color:#B9791C; }
-.summary-card.accent-scheduled{ border-top-color:#2B4A95; }
-.summary-card.accent-scheduled .num{ color:#2B4A95; }
-.summary-card.accent-completed{ border-top-color:#1F7A45; }
-.summary-card.accent-completed .num{ color:#1F7A45; }
-.summary-card.accent-unpaid{ border-top-color:#AD3324; }
-.summary-card.accent-unpaid .num{ color:#AD3324; }
-
-/* ---------------- Two-column layout ---------------- */
+/* ---------------- Summary cards, panels ----------------
+   Canonical versions now live in assets/css/dashboard-components.css
+   (single source of truth — this used to disagree with per-page inline
+   copies). Kept here: the two-column layout grid, which isn't part of
+   that consolidation. */
 .dash-columns{ display:grid; grid-template-columns: 1.7fr 1fr; gap:24px; align-items:start; margin-bottom:40px; }
 @media (max-width:960px){ .dash-columns{ grid-template-columns: 1fr; } }
-
-.panel{ background: var(--white); border:1px solid var(--line); border-radius: var(--arch-sm); padding: 24px; }
-.panel h3{ font-size:17px; margin-bottom:16px; }
-.panel-sub{ font-size:12.5px; color:var(--ink-soft); margin: -12px 0 18px; }
 
 /* ---------------- Calendar ---------------- */
 .cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
@@ -194,11 +172,7 @@
 .upcoming-date .mon{ font-family: var(--font-mono); font-size:9px; letter-spacing:1px; text-transform:uppercase; color: var(--gold-bright); }
 .upcoming-empty{ color: var(--ink-soft); font-size:13.5px; }
 
-.status-pill{ display:inline-block; font-family: var(--font-mono); font-size:9.5px; letter-spacing:1px; text-transform:uppercase; padding:3px 10px; border-radius:999px; font-weight:600; }
-.status-pill.pending{ background:#C9891F; color:#fff; }
-.status-pill.confirmed, .status-pill.approved{ background:#2B4A95; color:#fff; }
-.status-pill.completed{ background:#1F7A45; color:#fff; }
-.status-pill.cancelled, .status-pill.rejected{ background:#AD3324; color:#fff; }
+/* .status-pill: canonical definition now in dashboard-components.css. */
 
 /* ---------------- Notifications ---------------- */
 .notif-item{ display:flex; gap:10px; padding:12px 0; border-bottom:1px dashed var(--line); }

@@ -1,0 +1,282 @@
+/* ==========================================================================
+   Shared dashboard components
+   assets/css/dashboard-components.css
+
+   Loaded after dashboard.css + dashboard-sidebar.css on every authenticated
+   page. Consolidates pieces that used to be duplicated (or conflicting)
+   across dashboard-priest.php / dashboard-treasurer.php's inline <style>
+   blocks and dashboard.css itself — same design tokens (--navy, --gold,
+   --cream, etc.) defined in dashboard.css, no new colors introduced.
+   ========================================================================== */
+
+/* ---------------- Topbar: page title / breadcrumb ---------------- */
+.dash-breadcrumb{
+  display:flex; align-items:center; gap:10px; min-width:0;
+  padding-left:14px; margin-left:2px; border-left:1px solid rgba(255,255,255,0.18);
+}
+.dash-breadcrumb .crumb-sep{ display:none; }
+.dash-breadcrumb .crumb-current{
+  font-family: var(--font-body); font-size:14.5px; font-weight:500; color:#fff;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+@media (max-width: 760px){ .dash-breadcrumb{ display:none; } }
+
+/* ---------------- Topbar: profile dropdown ---------------- */
+.profile-btn{ width:auto; padding:0 4px 0 0; border-radius:999px; gap:0; }
+.profile-avatar{
+  width:32px; height:32px; border-radius:50%; background: var(--gold); color: var(--navy-deep);
+  font-family: var(--font-mono); font-size:12px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.profile-avatar-lg{ width:44px; height:44px; font-size:15px; }
+.dropdown-panel.dp-profile{ width: min(260px, calc(100vw - 32px)); padding:16px; }
+.dp-profile-head{ display:flex; align-items:center; gap:12px; padding-bottom:14px; margin-bottom:10px; border-bottom:1px solid var(--line); }
+.dp-profile-head > div{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+.dp-profile-name{ font-size:14px; font-weight:600; color: var(--navy); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* Base badge look (light background) — the sidebar overrides this for its
+   own dark panel via a more specific selector, see dashboard-sidebar.css. */
+.dash-role-badge{
+  display:inline-block; align-self:flex-start; font-family: var(--font-mono); font-size:9.5px;
+  letter-spacing:0.75px; text-transform:uppercase; padding:3px 9px; border-radius:999px;
+  background: var(--cream-deep); color: var(--gold-dim); border:1px solid var(--line);
+}
+.dp-profile-logout{
+  display:flex; align-items:center; gap:10px; width:100%; padding:10px 4px;
+  font-size:13.5px; font-weight:500; color:#A2432F; border-radius:8px; transition: background .15s;
+}
+.dp-profile-logout:hover{ background:#FBEAE7; }
+.dp-profile-logout svg{ width:16px; height:16px; }
+
+/* ---------------- Status pill (single canonical palette) ----------------
+   Replaces the old solid/white-text version that used to live in
+   dashboard.css and disagreed with the pastel version several pages
+   already used inline. Adds the previously-missing "no_show" state. */
+.status-pill{
+  display:inline-block; font-family: var(--font-mono); font-size:9.5px;
+  letter-spacing:0.75px; text-transform:uppercase; padding:4px 11px;
+  border-radius:999px; font-weight:600; white-space:nowrap;
+}
+.status-pill.pending{ background:#FBF3DE; color:#9C7C1E; }
+.status-pill.confirmed, .status-pill.approved{ background:#EAEEF9; color:#33488A; }
+.status-pill.completed{ background:#EAF5EC; color:#2F6B45; }
+.status-pill.cancelled, .status-pill.rejected{ background:#FBEAE7; color:#A2432F; }
+.status-pill.no_show{ background:#EEECE7; color:#6B6459; }
+
+/* ---------------- Payment chips ----------------
+   Two distinct axes that used to collide under one class name: the
+   PAYMENT METHOD (cash/gcash) and the PAYMENT STATUS (awaiting a
+   submission / pending the treasurer's verification / paid / rejected). */
+.pm-chip{
+  display:inline-block; font-family: var(--font-mono); font-size:10px;
+  letter-spacing:0.5px; text-transform:uppercase; padding:3px 9px;
+  border-radius:999px; font-weight:600; white-space:nowrap;
+}
+.pm-chip.cash{ background:#EAF5EC; color:#2F6B45; }
+.pm-chip.gcash{ background:#E6ECFA; color:#33488A; }
+
+.pay-status-chip{
+  display:inline-block; font-family: var(--font-mono); font-size:10px;
+  letter-spacing:0.5px; text-transform:uppercase; padding:3px 10px;
+  border-radius:999px; font-weight:600; white-space:nowrap;
+}
+.pay-status-chip.awaiting{ background:#EEECE7; color:#6B6459; }
+.pay-status-chip.unpaid{ background:#FBF3DE; color:#9C7C1E; }
+.pay-status-chip.paid{ background:#EAF5EC; color:#2F6B45; }
+.pay-status-chip.rejected{ background:#FBEAE7; color:#A2432F; }
+
+/* ---------------- Row-action buttons ----------------
+   The small pill buttons used in per-row actions (Approve/Reject/etc.) —
+   canonical recipe so any dashboard surfacing these matches queue.php. */
+.row-actions{ display:flex; gap:6px; flex-wrap:wrap; }
+.row-actions button{
+  font-family: var(--font-mono); font-size:10.5px; letter-spacing:0.5px; text-transform:uppercase;
+  padding:6px 12px; border-radius:999px; border:1px solid var(--line); background: var(--white); color: var(--navy);
+  transition: all .15s;
+}
+.row-actions button:disabled{ opacity:0.45; cursor:not-allowed; }
+.row-actions .approve-btn{ border-color: var(--gold); }
+.row-actions .approve-btn:hover:not(:disabled){ background: var(--cream-deep); }
+.row-actions .reject-btn{ border-color:#E9C8C0; color:#A2432F; }
+.row-actions .reject-btn:hover:not(:disabled){ background:#FBEAE7; }
+.row-actions .complete-btn{ border-color:#9CCBA9; color:#2F6B45; }
+.row-actions .complete-btn:hover:not(:disabled){ background:#EAF5EC; }
+.row-actions .noshow-btn{ border-color:#C9BFAE; color:#6B6459; }
+.row-actions .noshow-btn:hover:not(:disabled){ background:#F2EEE6; }
+.row-actions .docs-btn:hover:not(:disabled){ background: var(--cream-deep); }
+
+/* ---------------- Row actions dropdown ----------------
+   Consolidates a row's several action buttons (Approve/Reject/Request
+   Docs/Reschedule/...) behind a single "Actions" trigger instead of a row
+   of separate pills — much less visual noise in a busy table. Reuses the
+   exact same buttons/data-attributes the underlying JS already listens
+   for; only the container changed. */
+.actions-dropdown{ position:relative; display:inline-block; }
+.actions-trigger{
+  display:inline-flex; align-items:center; gap:7px;
+  font-family: var(--font-mono); font-size:11px; letter-spacing:0.5px; text-transform:uppercase;
+  padding:8px 16px; border-radius:999px; border:1px solid var(--line); background: var(--white); color: var(--navy);
+  transition: all .15s;
+}
+.actions-trigger:hover, .actions-trigger.open{ border-color: var(--gold); background: var(--cream-deep); }
+.actions-trigger svg{ width:12px; height:12px; transition: transform .18s var(--ease); flex-shrink:0; }
+.actions-trigger.open svg{ transform: rotate(180deg); }
+
+.actions-menu{
+  /* position:fixed + JS-computed top/left (assets/js/dashboard.js) — the
+     menu is moved to <body> when the page loads, so it always floats
+     above any ancestor's overflow:hidden/overflow-x:auto (e.g. the table
+     wrapper's rounded corners + mobile horizontal scroll) instead of
+     being invisibly clipped by it. */
+  position:fixed; z-index:900;
+  background: var(--white); border:1px solid var(--line); border-radius:12px;
+  box-shadow: var(--shadow-lift); padding:6px; min-width:180px;
+  display:none; flex-direction:column; gap:2px;
+}
+.actions-menu.open{ display:flex; }
+.actions-menu button, .actions-menu a{
+  text-align:left; width:100%; border-radius:8px; border:none; background:none;
+  padding:9px 12px; font-family: var(--font-mono); font-size:11px; letter-spacing:0.5px; text-transform:uppercase;
+  color: var(--navy); transition: background .12s; display:block;
+}
+.actions-menu button:hover:not(:disabled), .actions-menu a:hover{ background: var(--cream-deep); }
+.actions-menu button:disabled{ opacity:0.45; cursor:not-allowed; }
+.actions-menu a.active{ background: var(--cream-deep); font-weight:600; color: var(--gold-dim); }
+.actions-menu .approve-btn, .actions-menu .verify-btn{ color: var(--gold-dim); font-weight:600; }
+.actions-menu .reject-btn{ color:#A2432F; }
+.actions-menu .reject-btn:hover:not(:disabled){ background:#FBEAE7; }
+.actions-menu .complete-btn{ color:#2F6B45; }
+.actions-menu .complete-btn:hover:not(:disabled){ background:#EAF5EC; }
+.actions-menu .noshow-btn{ color:#6B6459; }
+
+/* Filter/export triggers reuse .actions-trigger/.actions-dropdown as-is;
+   this just lets the trigger show which filter is currently active. */
+.actions-trigger strong{ color: inherit; font-weight:700; }
+
+/* ---------------- Panel (shared card shell for dashboard sections) ---------------- */
+.panel{
+  background: var(--white); border:1px solid var(--line); border-radius: var(--arch-sm);
+  padding: 24px; box-shadow: var(--shadow-soft);
+}
+.panel h3{ font-size:17px; margin-bottom:16px; }
+.panel-sub{ font-size:12.5px; color:var(--ink-soft); margin: -12px 0 18px; }
+
+/* ---------------- Summary cards ----------------
+   Refined version of dashboard.css's .summary-card — subtle icon slot,
+   consistent hover lift, unchanged accent-* modifier names/colors. */
+.summary-grid{
+  display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap:16px; margin-bottom:36px;
+}
+.summary-card{
+  background: var(--white); border:1px solid var(--line); border-radius: var(--arch-sm);
+  padding: 20px 20px 18px; transition: transform .2s var(--ease), box-shadow .2s var(--ease);
+  border-top: 3px solid var(--gold); box-shadow: var(--shadow-soft);
+  display:flex; flex-direction:column; gap:10px;
+}
+.summary-card:hover{ transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+.summary-card .summary-icon{
+  width:38px; height:38px; border-radius:12px; background: var(--cream-deep); color: var(--gold-dim);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.summary-card .summary-icon svg{ width:19px; height:19px; }
+.summary-card .num{ font-family: var(--font-display); font-size:30px; color:var(--navy); font-weight:700; line-height:1; }
+.summary-card .lbl{ font-family: var(--font-mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; color: var(--ink-soft); display:block; }
+.summary-card.accent-pending{ border-top-color:#C9891F; }
+.summary-card.accent-pending .num{ color:#B9791C; }
+.summary-card.accent-pending .summary-icon{ color:#B9791C; }
+.summary-card.accent-scheduled{ border-top-color:#2B4A95; }
+.summary-card.accent-scheduled .num{ color:#2B4A95; }
+.summary-card.accent-scheduled .summary-icon{ color:#2B4A95; }
+.summary-card.accent-completed{ border-top-color:#1F7A45; }
+.summary-card.accent-completed .num{ color:#1F7A45; }
+.summary-card.accent-completed .summary-icon{ color:#1F7A45; }
+.summary-card.accent-unpaid{ border-top-color:#AD3324; }
+.summary-card.accent-unpaid .num{ color:#AD3324; }
+.summary-card.accent-unpaid .summary-icon{ color:#AD3324; }
+
+/* ---------------- Quick links row (dashboard shortcuts) ---------------- */
+.quick-links-row{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:36px; }
+.quick-link-btn{
+  display:inline-flex; align-items:center; gap:8px; background: var(--white); border:1px solid var(--line);
+  border-radius:999px; padding:10px 18px; font-size:13px; font-weight:500; color: var(--navy);
+  transition: all .18s;
+}
+.quick-link-btn:hover{ border-color: var(--gold); background: var(--cream-deep); transform: translateY(-2px); }
+.quick-link-btn svg{ width:16px; height:16px; color: var(--gold-dim); }
+
+/* ---------------- Responsive mini-table ----------------
+   Desktop: a normal table. Below 640px: each row becomes a stacked card,
+   with the column name shown via the data-label attribute already on
+   each <td> — no JS needed, genuinely usable on a phone instead of
+   horizontally scrolling. */
+.mini-table-wrap{ width:100%; }
+.mini-table-wrap table{ width:100%; border-collapse:collapse; }
+.mini-table-wrap th{
+  text-align:left; font-family: var(--font-mono); font-size:10px; letter-spacing:1px; text-transform:uppercase;
+  color: var(--ink-soft); padding:10px 12px; border-bottom:1px solid var(--line);
+}
+.mini-table-wrap td{ padding:12px; border-bottom:1px dashed var(--line); font-size:13px; color: var(--ink); }
+.mini-table-wrap tr:last-child td{ border-bottom:none; }
+
+@media (max-width: 640px){
+  .mini-table-wrap thead{ display:none; }
+  .mini-table-wrap table, .mini-table-wrap tbody, .mini-table-wrap tr, .mini-table-wrap td{ display:block; width:100%; }
+  .mini-table-wrap tr{
+    border:1px solid var(--line); border-radius:12px; margin-bottom:10px; padding:4px 14px;
+    background: var(--white);
+  }
+  .mini-table-wrap tr:last-child{ margin-bottom:0; }
+  .mini-table-wrap td{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    border-bottom:1px dashed var(--line); padding:9px 0; text-align:right;
+  }
+  .mini-table-wrap td:last-child{ border-bottom:none; }
+  .mini-table-wrap td::before{
+    content: attr(data-label); font-family: var(--font-mono); font-size:9.5px; letter-spacing:0.5px;
+    text-transform:uppercase; color: var(--ink-soft); text-align:left; flex-shrink:0;
+  }
+}
+
+/* ---------------- Bar charts (month/service/revenue) ----------------
+   Shared version of what used to be duplicated identically in
+   dashboard-priest.php and dashboard-treasurer.php's inline <style>. */
+.chart-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:32px; }
+@media (max-width:900px){ .chart-grid{ grid-template-columns:1fr; } }
+
+.chart-bars{ display:flex; align-items:flex-end; gap:8px; height:140px; margin-top:10px; }
+.chart-bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:6px; min-width:0; }
+.chart-bar{ width:100%; max-width:34px; background: linear-gradient(180deg, var(--gold-bright), var(--gold)); border-radius:6px 6px 2px 2px; min-height:2px; }
+.chart-bar-label{ font-family: var(--font-mono); font-size:9.5px; color: var(--ink-soft); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.chart-bar-value{ font-family: var(--font-mono); font-size:9px; color: var(--navy); }
+
+.svc-bar-row{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.svc-bar-row:last-child{ margin-bottom:0; }
+.svc-bar-label{ width:120px; flex-shrink:0; font-size:12.5px; color: var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.svc-bar-track{ flex:1; background: var(--cream-deep); border-radius:999px; height:10px; overflow:hidden; }
+.svc-bar-fill{ height:100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); border-radius:999px; }
+.svc-bar-amount{ width:80px; flex-shrink:0; text-align:right; font-family: var(--font-mono); font-size:11.5px; color:var(--navy); }
+
+@media (max-width:480px){
+  .svc-bar-label{ width:80px; font-size:11.5px; }
+  .svc-bar-amount{ width:64px; font-size:10.5px; }
+}
+
+/* ---------------- Activity list / mini log items ---------------- */
+.mini-log-item{ padding:10px 0; border-bottom:1px dashed var(--line); font-size:12.5px; }
+.mini-log-item:last-child{ border-bottom:none; }
+.mini-log-item .who{ font-weight:600; color:var(--navy); }
+.mini-log-item .when{ font-family: var(--font-mono); font-size:10px; color:var(--ink-soft); display:block; margin-top:2px; }
+
+/* ---------------- Timeline (Recent Logs) ---------------- */
+.timeline{ position:relative; padding-left:20px; }
+.timeline::before{ content:''; position:absolute; left:4px; top:6px; bottom:6px; width:1px; background:var(--line); }
+.timeline-item{ position:relative; padding-bottom:18px; }
+.timeline-item:last-child{ padding-bottom:0; }
+.timeline-item::before{ content:''; position:absolute; left:-20px; top:4px; width:8px; height:8px; border-radius:50%; background:var(--gold); }
+.timeline-item .tl-desc{ font-size:13px; color:var(--ink); margin:0 0 3px; }
+.timeline-item .tl-meta{ font-family: var(--font-mono); font-size:10.5px; color:var(--ink-soft); }
+.timeline-item .tl-role{ text-transform:uppercase; letter-spacing:0.5px; color:var(--gold-dim); }
+
+/* ---------------- Two-column activity panels ---------------- */
+.activity-cols{ display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:32px; }
+@media (max-width:900px){ .activity-cols{ grid-template-columns:1fr; } }
