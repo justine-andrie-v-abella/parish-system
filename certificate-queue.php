@@ -35,7 +35,8 @@ $notifPanelHtml = ob_get_clean();
 // ---------------- Check the certificate-requests migration has been applied ----------------
 $certReady = $pdo->query("SELECT to_regclass('public.certificate_requests')")->fetchColumn() !== null;
 
-$allowedFilters = ['all', 'pending', 'approved', 'completed', 'cancelled', 'rejected'];
+$filterLabels = ['pending' => 'Pending', 'approved' => 'Approved', 'completed' => 'Completed', 'cancelled' => 'Cancelled', 'rejected' => 'Rejected', 'all' => 'All'];
+$allowedFilters = array_keys($filterLabels);
 $filter = in_array($_GET['status'] ?? 'pending', $allowedFilters, true) ? ($_GET['status'] ?? 'pending') : 'pending';
 $q = trim($_GET['q'] ?? '');
 
@@ -67,36 +68,10 @@ require_once 'includes/dashboard-header.php';
 ?>
 
 <style>
-.filter-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; align-items:center; }
-.filter-chip{ font-family: var(--font-mono); font-size:11px; letter-spacing:0.5px; text-transform:uppercase; padding:8px 16px; border-radius:999px; border:1px solid var(--line); color: var(--ink-soft); background: var(--white); }
-.filter-chip.active{ background: var(--navy); border-color: var(--navy); color:#fff; font-weight:600; }
-
 .queue-toolbar{ display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
 .queue-search{ display:flex; gap:8px; }
 .queue-search input{ border:1px solid var(--line); border-radius:999px; padding:9px 16px; font-size:13px; font-family:inherit; width:220px; background:var(--white); }
 .queue-search input:focus{ outline:none; border-color:var(--gold); }
-
-.status-pill{ font-family: var(--font-mono); font-size:10px; letter-spacing:0.5px; text-transform:uppercase; padding:3px 10px; border-radius:999px; }
-.status-pill.pending{ background:#FBF3DE; color:#9C7C1E; }
-.status-pill.approved{ background:#EAEEF9; color:#33488A; }
-.status-pill.completed{ background:#EAF5EC; color:#2F6B45; }
-.status-pill.cancelled, .status-pill.rejected{ background:#FBEAE7; color:#A2432F; }
-
-.pm-chip{ font-family: var(--font-mono); font-size:10px; letter-spacing:0.5px; text-transform:uppercase; padding:3px 9px; border-radius:999px; }
-.pm-chip.unpaid{ background:#FBF3DE; color:#9C7C1E; }
-.pm-chip.paid{ background:#EAF5EC; color:#2F6B45; }
-.pm-chip.rejected{ background:#FBEAE7; color:#A2432F; }
-
-.row-actions{ display:flex; gap:6px; flex-wrap:wrap; }
-.row-actions button{ font-family: var(--font-mono); font-size:10.5px; letter-spacing:0.5px; text-transform:uppercase; padding:6px 11px; border-radius:999px; border:1px solid var(--line); background:var(--white); color:var(--navy); }
-.row-actions button:disabled{ opacity:0.45; cursor:not-allowed; }
-.row-actions .approve-btn{ border-color: var(--gold); }
-.row-actions .approve-btn:hover:not(:disabled){ background: var(--cream-deep); }
-.row-actions .reject-btn{ border-color:#E9C8C0; color:#A2432F; }
-.row-actions .reject-btn:hover{ background:#FBEAE7; }
-.row-actions .docs-btn:hover{ background: var(--cream-deep); }
-.row-actions .complete-btn{ border-color:#9CCBA9; color:#2F6B45; }
-.row-actions .complete-btn:hover:not(:disabled){ background:#EAF5EC; }
 
 .qmodal-overlay{ position:fixed; inset:0; background:rgba(11,20,36,0.55); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .2s; }
 .qmodal-overlay.open{ opacity:1; pointer-events:auto; }
@@ -129,12 +104,18 @@ require_once 'includes/dashboard-header.php';
     <input type="text" name="q" value="<?php echo htmlspecialchars($q); ?>" placeholder="Search parishioner or registrant…">
     <button type="submit" class="btn btn-outline btn-sm">Search</button>
   </form>
-</div>
 
-<div class="filter-row">
-  <?php foreach (['pending' => 'Pending', 'approved' => 'Approved', 'completed' => 'Completed', 'cancelled' => 'Cancelled', 'rejected' => 'Rejected', 'all' => 'All'] as $key => $label): ?>
-    <a href="?status=<?php echo $key; ?>&q=<?php echo urlencode($q); ?>" class="filter-chip<?php echo $filter === $key ? ' active' : ''; ?>"><?php echo $label; ?></a>
-  <?php endforeach; ?>
+  <div class="actions-dropdown">
+    <button type="button" class="actions-trigger" aria-haspopup="true" aria-expanded="false">
+      Filter: <strong><?php echo htmlspecialchars($filterLabels[$filter] ?? ucfirst($filter)); ?></strong>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="actions-menu">
+      <?php foreach ($filterLabels as $key => $label): ?>
+        <a href="?status=<?php echo $key; ?>&q=<?php echo urlencode($q); ?>"<?php echo $filter === $key ? ' class="active"' : ''; ?>><?php echo $label; ?></a>
+      <?php endforeach; ?>
+    </div>
+  </div>
 </div>
 
 <div class="requests-table-wrap">
@@ -158,7 +139,7 @@ require_once 'includes/dashboard-header.php';
             <td><?php echo htmlspecialchars($r['full_name']); ?></td>
             <td class="svc-cell"><?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?></td>
             <td><?php echo $detailParts ? htmlspecialchars(implode(' · ', $detailParts)) : '<span style="color:var(--ink-soft);">&mdash;</span>'; ?></td>
-            <td><span class="pm-chip <?php echo $r['payment_status']; ?>"><?php echo $r['payment_status'] === 'unpaid' ? 'Pending Verification' : ucfirst($r['payment_status']); ?></span></td>
+            <td><span class="pay-status-chip <?php echo $r['payment_status']; ?>"><?php echo $r['payment_status'] === 'unpaid' ? 'Pending Verification' : ucfirst($r['payment_status']); ?></span></td>
             <td>
               <span class="status-pill <?php echo $r['status']; ?>"><?php echo ucfirst($r['status']); ?></span>
               <?php if (in_array($r['status'], ['rejected'], true) && $r['status_reason']): ?>
@@ -166,27 +147,35 @@ require_once 'includes/dashboard-header.php';
               <?php endif; ?>
             </td>
             <td>
-              <div class="row-actions">
-                <?php if ($r['status'] === 'pending'): ?>
-                  <?php if ($r['payment_status'] === 'paid'): ?>
-                    <button type="button" class="approve-btn" data-approve-id="<?php echo $r['id']; ?>">Approve</button>
-                  <?php else: ?>
-                    <button type="button" class="approve-btn" disabled title="Payment must be verified by the treasurer first">Approve</button>
-                  <?php endif; ?>
-                  <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>">Reject</button>
-                  <button type="button" class="docs-btn" data-docs-id="<?php echo $r['id']; ?>">Request Docs</button>
-                <?php elseif ($r['status'] === 'approved'): ?>
-                  <?php if ($r['payment_status'] === 'paid'): ?>
-                    <button type="button" class="complete-btn" data-complete-id="<?php echo $r['id']; ?>">Mark Completed</button>
-                  <?php else: ?>
-                    <button type="button" class="complete-btn" disabled title="Payment must be verified first">Mark Completed</button>
-                  <?php endif; ?>
-                  <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>">Reject</button>
-                  <button type="button" class="docs-btn" data-docs-id="<?php echo $r['id']; ?>">Request Docs</button>
-                <?php else: ?>
-                  <span style="font-size:11px; color:var(--ink-soft);">—</span>
-                <?php endif; ?>
-              </div>
+              <?php if (in_array($r['status'], ['pending', 'approved'], true)): ?>
+                <div class="actions-dropdown">
+                  <button type="button" class="actions-trigger" aria-haspopup="true" aria-expanded="false">
+                    Actions
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                  </button>
+                  <div class="actions-menu">
+                    <?php if ($r['status'] === 'pending'): ?>
+                      <?php if ($r['payment_status'] === 'paid'): ?>
+                        <button type="button" class="approve-btn" data-approve-id="<?php echo $r['id']; ?>">Approve</button>
+                      <?php else: ?>
+                        <button type="button" class="approve-btn" disabled title="Payment must be verified by the treasurer first">Approve</button>
+                      <?php endif; ?>
+                      <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>">Reject</button>
+                      <button type="button" class="docs-btn" data-docs-id="<?php echo $r['id']; ?>">Request Docs</button>
+                    <?php else: ?>
+                      <?php if ($r['payment_status'] === 'paid'): ?>
+                        <button type="button" class="complete-btn" data-complete-id="<?php echo $r['id']; ?>">Mark Completed</button>
+                      <?php else: ?>
+                        <button type="button" class="complete-btn" disabled title="Payment must be verified first">Mark Completed</button>
+                      <?php endif; ?>
+                      <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>">Reject</button>
+                      <button type="button" class="docs-btn" data-docs-id="<?php echo $r['id']; ?>">Request Docs</button>
+                    <?php endif; ?>
+                  </div>
+                </div>
+              <?php else: ?>
+                <span style="font-size:11px; color:var(--ink-soft);">—</span>
+              <?php endif; ?>
             </td>
           </tr>
         <?php endforeach; ?>
