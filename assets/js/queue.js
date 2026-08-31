@@ -7,6 +7,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
   }
 
+  // Per-row "Actions" / "Filter" / "Export" dropdown open-close behavior
+  // is wired globally in assets/js/dashboard.js (loaded on every page) —
+  // see the ".actions-dropdown" block there. Nothing page-specific needed
+  // here beyond the buttons' own click handlers below.
+
   // ---------------- Approve ----------------
   document.querySelectorAll('[data-approve-id]').forEach(function (btn) {
     btn.addEventListener('click', function () {

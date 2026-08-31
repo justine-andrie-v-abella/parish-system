@@ -117,3 +117,74 @@ function positionDropdown(panel, btn) {
   panel.style.right = 'auto';
   panel.style.top = top + 'px';
 }
+
+// ---------------- Generic "Actions" / "Filter" / "Export" dropdowns ----------------
+// Shared across every page that has one (queue.php, certificate-queue.php,
+// payments.php, ...) so the same markup/behavior works everywhere without
+// each page re-implementing it. The menu is repositioned with JS and moved
+// to <body> rather than relying on CSS position:absolute, because several
+// of these triggers live inside a table wrapper that needs
+// overflow:hidden/overflow-x:auto for its rounded corners and mobile
+// horizontal scroll — a plain absolutely-positioned child would get
+// invisibly clipped by that same overflow instead of floating above it.
+(function () {
+  function closeAllMenus(except) {
+    document.querySelectorAll('.actions-menu.open').forEach(function (menu) {
+      if (menu !== except) menu.classList.remove('open');
+    });
+    document.querySelectorAll('.actions-trigger.open').forEach(function (btn) {
+      if (btn !== except) { btn.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
+    });
+  }
+
+  function positionMenu(menu, trigger) {
+    var margin = 8;
+    var rect = trigger.getBoundingClientRect();
+    var menuWidth = menu.offsetWidth || 180;
+    var menuHeight = menu.offsetHeight || 0;
+
+    var left = rect.right - menuWidth;
+    left = Math.max(margin, Math.min(left, window.innerWidth - menuWidth - margin));
+
+    var top = rect.bottom + 6;
+    if (top + menuHeight > window.innerHeight - margin && rect.top - menuHeight - 6 > margin) {
+      top = rect.top - menuHeight - 6; // not enough room below — open upward instead
+    }
+
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+  }
+
+  document.querySelectorAll('.actions-dropdown').forEach(function (wrap) {
+    var trigger = wrap.querySelector('.actions-trigger');
+    var menu = wrap.querySelector('.actions-menu');
+    if (!trigger || !menu) return;
+
+    document.body.appendChild(menu); // escape any overflow:hidden ancestor
+
+    trigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var willOpen = !menu.classList.contains('open');
+      closeAllMenus();
+      if (willOpen) {
+        menu.classList.add('open');
+        trigger.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+        positionMenu(menu, trigger);
+      }
+    });
+
+    menu.addEventListener('click', function (e) {
+      e.stopPropagation();
+      // Plain navigation links (filter/export options) close naturally on
+      // navigation; buttons (row actions) close immediately since they
+      // either open their own modal or reload the page on success.
+      if (e.target.closest('button')) closeAllMenus();
+    });
+  });
+
+  document.addEventListener('click', function () { closeAllMenus(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAllMenus(); });
+  window.addEventListener('resize', function () { closeAllMenus(); });
+  window.addEventListener('scroll', function () { closeAllMenus(); }, true);
+})();
