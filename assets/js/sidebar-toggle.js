@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!toggle || !sidebar || !overlay) return;
 
   function openSidebar() {
+    // The desktop "collapsed to icons" state is unrelated to the mobile
+    // drawer, but if it was set before the window got resized down to
+    // mobile width, its higher-specificity CSS could otherwise still
+    // apply here — drop it so the drawer always opens at full width.
+    sidebar.classList.remove('collapsed');
     sidebar.classList.add('open');
     overlay.classList.add('open');
     toggle.setAttribute('aria-expanded', 'true');
@@ -39,9 +44,15 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // If the window is resized back up to desktop width, make sure the
-  // drawer state doesn't linger (e.g. rotating a tablet).
+  // drawer state doesn't linger (e.g. rotating a tablet). Going the other
+  // way, drop any leftover "collapsed to icons" state too — that's a
+  // desktop-only affordance and shouldn't affect the mobile drawer.
   window.addEventListener('resize', function () {
-    if (window.innerWidth > 860) closeSidebar();
+    if (window.innerWidth > 860) {
+      closeSidebar();
+    } else {
+      sidebar.classList.remove('collapsed');
+    }
   });
 
   // Escape key closes it too
