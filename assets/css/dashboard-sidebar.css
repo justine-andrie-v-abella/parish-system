@@ -307,6 +307,12 @@
     overflow-y: auto;
   }
   .dash-sidebar.open{ transform: translateX(0); }
+  /* A sidebar collapsed on desktop and then resized down to mobile without
+     a reload keeps the .collapsed class. #dashSidebar.collapsed above has
+     ID-level specificity, which otherwise beats the plain-class .open rule
+     and leaves the drawer stuck off-screen even though it "opened". This
+     matches that same specificity so opening always wins on mobile. */
+  #dashSidebar.collapsed.open{ transform: translateX(0); }
 
   /* Collapse-to-icons is a desktop-only affordance — the off-canvas drawer
      already fully hides/shows, so show the drawer at full width/detail
