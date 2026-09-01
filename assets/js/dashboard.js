@@ -30,6 +30,26 @@ document.querySelectorAll('.tab-switch').forEach(switcher => {
 // resetting the calendar dropdown back to the current month whenever it closes.
 (function () {
   const toggles = document.querySelectorAll('[data-dropdown-toggle]');
+
+  // Small explicit close button, shown only on narrow screens (see the
+  // max-width:700px rules in dashboard.css) as a touch-friendly dismiss
+  // affordance — clicking outside the panel already closes it too.
+  // Exposed on window so the calendar month-navigation code below can
+  // re-add this after it replaces the panel's innerHTML wholesale.
+  window.__addDropdownCloseButton = function (panel) {
+    if (panel.querySelector(':scope > .dropdown-panel-close')) return; // already there
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'dropdown-panel-close';
+    closeBtn.setAttribute('aria-label', 'Close');
+    closeBtn.innerHTML = '&times;';
+    closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closeAll(); });
+    panel.insertBefore(closeBtn, panel.firstChild);
+  };
+  document.querySelectorAll('.dropdown-panel').forEach(window.__addDropdownCloseButton);
+
+  // Captured AFTER the close button is inserted, so resetting back to this
+  // snapshot on close restores the button along with the rest of the panel.
   const calPanel = document.querySelector('.dropdown-panel[data-dropdown="cal"]');
   const calDefaultHtml = calPanel ? calPanel.innerHTML : null;
 
@@ -85,6 +105,7 @@ document.querySelectorAll('.tab-switch').forEach(switcher => {
       })
       .then(html => {
         panel.innerHTML = html;
+        if (window.__addDropdownCloseButton) window.__addDropdownCloseButton(panel);
       })
       .catch(err => console.error(err));
   }
