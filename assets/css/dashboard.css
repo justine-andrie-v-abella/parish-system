@@ -291,17 +291,22 @@
 .dropdown-panel.dp-notif{ width: min(320px, calc(100vw - 32px)); }
 .dropdown-panel.open{ opacity:1; transform:none; pointer-events:auto; }
 
-/* raise the breakpoint so narrow desktop windows get the same treatment as phones,
-   and pin to the viewport instead of the trigger button */
+/* Below 700px, the panel stays exactly what it already is on desktop — a
+   small dropdown anchored under its icon (position:absolute, width clamped
+   to the viewport by the base rule above) — rather than being blown up
+   into a fixed, near-full-width sheet pinned to the top of the screen.
+   That's what was actually causing it to feel like it "took over" a small
+   window; a dim backdrop on top of that just made the oversized box more
+   noticeable without shrinking it, so there's no backdrop here at all. */
+.dropdown-panel-close{
+  display:flex; align-items:center; justify-content:center;
+  position:absolute; top:10px; right:10px; width:26px; height:26px; border-radius:50%;
+  background: var(--cream-deep); color: var(--ink-soft); font-size:16px; line-height:1; border:none; z-index:5;
+}
+@media (min-width: 701px){ .dropdown-panel-close{ display:none; } } /* desktop: closing by clicking away is enough */
+
 @media (max-width: 700px){
-  .dropdown-panel{
-    position: fixed;
-    top: 64px; left: 20px; right: 20px;
-    width: auto !important;
-    max-width: none;
-    max-height: min(66vh, 440px);
-    padding: 16px;
-  }
+  .dropdown-panel{ padding-top:44px; }
 
   /* Scoped to the dropdown only — the goal is a compact popover on phones,
      not a smaller version of a full calendar page. */
