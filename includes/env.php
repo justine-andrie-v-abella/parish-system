@@ -4,8 +4,16 @@
 
 function load_env(string $path): void
 {
+    // On a host like Render, config comes in as real environment variables
+    // set in the dashboard — there's no .env file to upload at all. Only
+    // treat a missing file as an error when nothing has configured DB_HOST
+    // some other way either, so a genuinely mis-set-up local install still
+    // fails loudly instead of connecting to nothing.
     if (!file_exists($path)) {
-        throw new RuntimeException(".env file not found at {$path}");
+        if (getenv('DB_HOST') !== false) {
+            return;
+        }
+        throw new RuntimeException(".env file not found at {$path}, and no environment variables are set either.");
     }
 
     $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);

@@ -105,11 +105,15 @@ $catalog_icon_keys = ['dove', 'flame', 'rings', 'cross', 'candle', 'vessel'];
  */
 try {
     require_once __DIR__ . '/db-credentials.php';
-    $catalogPdo = new PDO(
-        "pgsql:host={$DB_HOST};port={$DB_PORT};dbname={$DB_NAME};sslmode=require",
-        $DB_USER, $DB_PASS,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
-    );
+    // Reuse the shared connection if includes/db.php (or an earlier require
+    // of this file) already opened one this request; otherwise open it here.
+    // Either way there's only ever one connection per request — opening a
+    // second just to read the catalog would mean paying the full remote
+    // TCP+TLS+auth handshake twice on every single page load.
+    if (!isset($pdo) || !($pdo instanceof PDO)) {
+        $pdo = open_db_connection($DB_HOST, $DB_PORT, $DB_NAME, $DB_USER, $DB_PASS);
+    }
+    $catalogPdo = $pdo;
 
     if ($catalogPdo->query("SELECT to_regclass('public.services')")->fetchColumn() !== null) {
         // The `category` column only exists once migration_add_certificate_requests.sql

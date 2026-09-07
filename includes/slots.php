@@ -70,3 +70,38 @@ function format_slot_label(string $time): string
 {
     return date('g:i A', strtotime($time));
 }
+
+/**
+ * Given a service's 'weekly'/'nth_weekday' schedule rows and a Y-m-d date,
+ * returns the subset of rows that actually apply to that date. Shared by
+ * get-slots.php (single date) and get-service-calendar.php (whole month)
+ * so both agree on what "offered" means for a given day.
+ */
+function match_dated_schedule_rules(array $rules, string $dateStr): array
+{
+    $dt = DateTime::createFromFormat('Y-m-d', $dateStr);
+    if (!$dt) {
+        return [];
+    }
+
+    $dow          = (int) $dt->format('w'); // 0 = Sunday ... 6 = Saturday
+    $dayNum       = (int) $dt->format('j');
+    $daysInMonth  = (int) $dt->format('t');
+    $nth          = (int) ceil($dayNum / 7);
+    $isLastOccurrence = ($dayNum + 7) > $daysInMonth;
+
+    $matches = [];
+    foreach ($rules as $r) {
+        if ((int) $r['day_of_week'] !== $dow) continue;
+
+        if ($r['rule_type'] === 'weekly') {
+            $matches[] = $r;
+        } elseif ($r['rule_type'] === 'nth_weekday') {
+            $occ = array_map('trim', explode(',', (string) $r['occurrences']));
+            if (in_array((string) $nth, $occ, true) || (in_array('last', $occ, true) && $isLastOccurrence)) {
+                $matches[] = $r;
+            }
+        }
+    }
+    return $matches;
+}
