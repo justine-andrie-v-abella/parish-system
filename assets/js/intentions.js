@@ -27,6 +27,66 @@ document.addEventListener('DOMContentLoaded', function () {
   var formErrorStep1 = document.getElementById('formErrorStep1');
   var goToPaymentBtn = document.getElementById('goToPayment');
 
+  // Booking calendar (per-service day picker) elements
+  var apptDateLoading = document.getElementById('apptDateLoading');
+  var bookCalTrigger = document.getElementById('bookCalTrigger');
+  var bookCalTriggerText = document.getElementById('bookCalTriggerText');
+  var bookCal = document.getElementById('bookCal');
+  var bookCalTitle = document.getElementById('bookCalTitle');
+  var bookCalGrid = document.getElementById('bookCalGrid');
+  var bookCalPrev = document.getElementById('bookCalPrev');
+  var bookCalNext = document.getElementById('bookCalNext');
+  var calMonth, calYear; // 1-12, full year — the month currently shown in the booking calendar
+  var calDays = {}; // date string -> 'available' | 'full', for the month currently shown
+  var datePickerRequestId = 0; // guards against a slow, stale fetch from a previously-opened service overwriting the current one
+
+  // Moved to <body> once so position:fixed coordinates aren't clipped by
+  // .modal-box's overflow-y:auto (same reasoning as .actions-menu elsewhere).
+  document.body.appendChild(bookCal);
+
+  function positionBookCal() {
+    var margin = 12;
+    var rect = bookCalTrigger.getBoundingClientRect();
+    var panelWidth = bookCal.offsetWidth || 300;
+    var panelHeight = bookCal.offsetHeight || 0;
+
+    var left = Math.max(margin, Math.min(rect.left, window.innerWidth - panelWidth - margin));
+    var top = rect.bottom + 8;
+    if (top + panelHeight > window.innerHeight - margin && rect.top - panelHeight - 8 > margin) {
+      top = rect.top - panelHeight - 8; // not enough room below — open upward
+    }
+
+    bookCal.style.left = left + 'px';
+    bookCal.style.top = top + 'px';
+  }
+
+  function closeBookCal() {
+    bookCal.classList.remove('open');
+    bookCalTrigger.classList.remove('open');
+    bookCalTrigger.setAttribute('aria-expanded', 'false');
+  }
+
+  function openBookCal() {
+    bookCal.classList.add('open');
+    bookCalTrigger.classList.add('open');
+    bookCalTrigger.setAttribute('aria-expanded', 'true');
+    positionBookCal();
+  }
+
+  bookCalTrigger.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (bookCal.classList.contains('open')) {
+      closeBookCal();
+    } else {
+      openBookCal();
+    }
+  });
+  bookCal.addEventListener('click', function (e) { e.stopPropagation(); });
+  document.addEventListener('click', closeBookCal);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeBookCal(); });
+  window.addEventListener('resize', closeBookCal);
+  window.addEventListener('scroll', closeBookCal, true);
+
   // Step 2 (documents) elements
   var backToDetailsBtn = document.getElementById('backToDetails');
   var docsFieldsContainer = document.getElementById('docsFieldsContainer');
@@ -96,6 +156,136 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  var MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function formatDateLabel(dateStr) {
+    var parts = dateStr.split('-');
+    var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function selectCalendarDate(dateStr, cell) {
+    bookCalGrid.querySelectorAll('.book-cal-cell.bc-selected').forEach(function (c) { c.classList.remove('bc-selected'); });
+    if (cell) cell.classList.add('bc-selected');
+    dateInput.value = dateStr;
+    bookCalTriggerText.textContent = formatDateLabel(dateStr);
+    bookCalTriggerText.classList.remove('bct-placeholder');
+    closeBookCal();
+    fetchSlots();
+  }
+
+  function renderCalendarGrid() {
+    var firstOfMonth = new Date(calYear, calMonth - 1, 1);
+    var daysInMonth = new Date(calYear, calMonth, 0).getDate();
+    var startWeekday = firstOfMonth.getDay();
+    var today = todayStr();
+    var selectedDate = dateInput.value;
+
+    bookCalTitle.textContent = MONTH_NAMES[calMonth - 1] + ' ' + calYear;
+
+    var html = '';
+    ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(function (d) { html += '<div class="book-cal-dow">' + d + '</div>'; });
+    for (var i = 0; i < startWeekday; i++) html += '<div class="book-cal-cell empty"></div>';
+
+    var anyOpen = false;
+    for (var d = 1; d <= daysInMonth; d++) {
+      var dateStr = calYear + '-' + String(calMonth).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      var status = calDays[dateStr]; // 'available' | 'full' | undefined (not offered / past)
+      var cls = 'book-cal-cell';
+      if (status === 'available') { cls += ' bc-avail'; anyOpen = true; }
+      else if (status === 'full') cls += ' bc-full';
+      if (dateStr === today) cls += ' bc-today';
+      if (dateStr === selectedDate && status === 'available') cls += ' bc-selected';
+      html += '<div class="' + cls + '" data-date="' + dateStr + '" data-status="' + (status || '') + '">' + d + '</div>';
+    }
+    if (!anyOpen) {
+      html += '<div class="book-cal-empty-note">No open dates this month — try another month.</div>';
+    }
+
+    bookCalGrid.innerHTML = html;
+
+    bookCalGrid.querySelectorAll('.book-cal-cell.bc-avail').forEach(function (cell) {
+      cell.addEventListener('click', function () {
+        selectCalendarDate(cell.dataset.date, cell);
+      });
+    });
+
+    var now = new Date();
+    bookCalPrev.disabled = (calYear < now.getFullYear()) || (calYear === now.getFullYear() && calMonth <= now.getMonth() + 1);
+  }
+
+  function loadCalendarMonth() {
+    bookCalGrid.innerHTML = '<div class="book-cal-empty-note">Loading&hellip;</div>';
+    var url = 'ajax/get-service-calendar.php?service_key=' + encodeURIComponent(serviceKeyInput.value) + '&month=' + calMonth + '&year=' + calYear;
+    fetch(url)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        calDays = data.days || {};
+        renderCalendarGrid();
+        positionBookCal();
+      })
+      .catch(function () {
+        bookCalGrid.innerHTML = '<div class="book-cal-empty-note">Couldn\'t load the calendar. Please try again.</div>';
+      });
+  }
+
+  bookCalPrev.addEventListener('click', function () {
+    calMonth--;
+    if (calMonth < 1) { calMonth = 12; calYear--; }
+    loadCalendarMonth();
+  });
+  bookCalNext.addEventListener('click', function () {
+    calMonth++;
+    if (calMonth > 12) { calMonth = 1; calYear++; }
+    loadCalendarMonth();
+  });
+
+  // Decides, per service, whether to show the visual day-picker calendar
+  // (weekly/nth_weekday schedules) or fall back to the plain native date
+  // input (by_arrangement/always_available/no schedule configured yet).
+  function setupDatePicker(serviceKey) {
+    var now = new Date();
+    calMonth = now.getMonth() + 1;
+    calYear = now.getFullYear();
+    calDays = {};
+    closeBookCal();
+    bookCalTriggerText.textContent = 'Choose a date';
+    bookCalTriggerText.classList.add('bct-placeholder');
+
+    // Show neither control until we know which one applies — avoids a
+    // flash of the plain date field for a service that turns out to have
+    // a real calendar (the schedule lookup is a network round trip).
+    bookCalTrigger.style.display = 'none';
+    dateInput.style.display = 'none';
+    apptDateLoading.style.display = 'block';
+
+    var requestId = ++datePickerRequestId;
+
+    fetch('ajax/get-service-calendar.php?service_key=' + encodeURIComponent(serviceKey) + '&month=' + calMonth + '&year=' + calYear)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (requestId !== datePickerRequestId) return; // a newer service was opened meanwhile — ignore this stale response
+        apptDateLoading.style.display = 'none';
+        if (data.mode === 'calendar') {
+          calDays = data.days || {};
+          bookCalTrigger.style.display = 'flex';
+          renderCalendarGrid();
+        } else {
+          dateInput.style.display = '';
+        }
+      })
+      .catch(function () {
+        if (requestId !== datePickerRequestId) return;
+        apptDateLoading.style.display = 'none';
+        dateInput.style.display = ''; // fall back to the plain date field on error
+      });
+  }
+
   function openModal(serviceKey, serviceName, requirements) {
     serviceKeyInput.value = serviceKey;
     modalServiceName.textContent = 'Request ' + serviceName;
@@ -127,6 +317,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     dateInput.required = !isConditionalService;
 
+    if (!isConditionalService) {
+      setupDatePicker(serviceKey);
+    } else {
+      datePickerRequestId++; // invalidate any in-flight lookup from a previously-opened service
+      closeBookCal();
+      bookCalTrigger.style.display = 'none';
+      apptDateLoading.style.display = 'none';
+      dateInput.style.display = 'none';
+    }
+
     formErrorStep1.classList.remove('show');
     formErrorStep2.classList.remove('show');
     formSuccess.classList.remove('show');
@@ -139,6 +339,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function closeModal() {
     modal.classList.remove('open');
+    closeBookCal(); // bookCal lives in <body>, not inside the modal — must close explicitly
   }
 
   document.querySelectorAll('[data-book-btn]').forEach(function (btn) {
