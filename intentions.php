@@ -62,6 +62,58 @@ require_once 'includes/dashboard-header.php';
 
 .modal-substep{ display:none; }
 .modal-substep.active{ display:block; }
+
+/* ---- Booking calendar (per-service day picker) ---- */
+/* Looks like a normal input field; clicking it pops the calendar open
+   below it, the same interaction as the header's calendar/notification
+   dropdowns — it doesn't sit permanently expanded in the form. */
+.book-cal-trigger{
+  display:flex; align-items:center; gap:9px; width:100%; text-align:left;
+  border:1px solid var(--line); border-radius: var(--arch-sm); background:#fff;
+  padding:10px 12px; font-family:inherit; font-size:13.5px; color: var(--ink);
+  cursor:pointer; transition: border-color .15s;
+}
+.book-cal-trigger:hover, .book-cal-trigger.open{ border-color: var(--gold); }
+.book-cal-trigger svg{ flex-shrink:0; color: var(--ink-soft); }
+.book-cal-trigger .bct-placeholder{ color: var(--ink-soft); }
+.book-cal-trigger .bct-chevron{ margin-left:auto; transition: transform .15s; }
+.book-cal-trigger.open .bct-chevron{ transform: rotate(180deg); }
+
+/* Moved to <body> by JS and positioned with fixed coordinates (see
+   .actions-menu elsewhere in the app for the same technique) so it isn't
+   clipped by .modal-box's overflow-y:auto. */
+.book-cal{
+  position:fixed; z-index:1200; width:300px; max-width: calc(100vw - 32px);
+  border:1px solid var(--line); border-radius: var(--arch-sm); padding:14px;
+  background: var(--cream); box-shadow: var(--shadow-lift);
+  opacity:0; transform: translateY(-6px); pointer-events:none; transition: opacity .16s var(--ease), transform .16s var(--ease);
+}
+.book-cal.open{ opacity:1; transform:none; pointer-events:auto; }
+.book-cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.book-cal-title{ font-family: var(--font-mono); font-size:12.5px; font-weight:700; letter-spacing:0.5px; color: var(--navy); }
+.book-cal-nav{
+  width:26px; height:26px; border-radius:50%; border:1px solid var(--line); background:#fff; color: var(--ink-soft);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all .15s;
+}
+.book-cal-nav:hover{ border-color: var(--gold); color: var(--navy); }
+.book-cal-nav:disabled{ opacity:0.35; cursor:not-allowed; }
+.book-cal-legend{ display:flex; gap:14px; font-size:10.5px; color: var(--ink-soft); margin-bottom:10px; }
+.book-cal-legend .bc-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+.bc-dot-avail{ background:#3F9A5C; }
+.bc-dot-full{ background:#C0483A; }
+.book-cal-grid{ display:grid; grid-template-columns: repeat(7, 1fr); gap:4px; }
+.book-cal-dow{ text-align:center; font-family: var(--font-mono); font-size:9.5px; color: var(--ink-soft); padding-bottom:4px; }
+.book-cal-cell{
+  aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:8px; font-size:12px;
+  color: var(--ink-soft); background:transparent; border:1px solid transparent; cursor:default; position:relative;
+}
+.book-cal-cell.empty{ visibility:hidden; }
+.book-cal-cell.bc-avail{ background:#EAF6EE; color:#2A7A44; border-color:#CDEBD6; cursor:pointer; font-weight:600; }
+.book-cal-cell.bc-avail:hover{ background:#3F9A5C; color:#fff; }
+.book-cal-cell.bc-full{ background:#FBEAE7; color:#B4453A; cursor:not-allowed; text-decoration:line-through; opacity:0.75; }
+.book-cal-cell.bc-selected{ background: var(--navy) !important; color:#fff !important; border-color: var(--navy) !important; }
+.book-cal-cell.bc-today{ box-shadow: inset 0 0 0 1.5px var(--gold); }
+.book-cal-empty-note{ grid-column: 1 / -1; text-align:center; font-size:11.5px; color: var(--ink-soft); padding:8px 0; }
 </style>
 
 <div class="dash-hero page-hero">
@@ -154,8 +206,46 @@ require_once 'includes/dashboard-header.php';
         </div>
 
         <div class="form-group" id="apptDateGroup">
-          <label for="apptDate">Preferred Date</label>
-          <input type="date" name="appointment_date" id="apptDate" min="<?php echo date('Y-m-d'); ?>" required>
+          <label>Preferred Date</label>
+
+          <!-- Shown only for services with a fixed weekly/1st-3rd-week-style
+               schedule. Clicking it pops out a calendar (like the header's
+               calendar/notification dropdowns) so a parishioner can see at a
+               glance which days the service is offered, instead of guessing
+               dates in a plain date picker. Populated by intentions.js from
+               ajax/get-service-calendar.php. -->
+          <!-- Shown only while ajax/get-service-calendar.php is resolving,
+               so the plain date field never flashes first for a service
+               that turns out to have a calendar. -->
+          <p class="slot-hint" id="apptDateLoading">Checking availability&hellip;</p>
+
+          <button type="button" class="book-cal-trigger" id="bookCalTrigger" style="display:none;" aria-expanded="false">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+            <span id="bookCalTriggerText" class="bct-placeholder">Choose a date</span>
+            <svg class="bct-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+
+          <div id="bookCal" class="book-cal">
+            <div class="book-cal-head">
+              <button type="button" class="book-cal-nav" id="bookCalPrev" aria-label="Previous month">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <span class="book-cal-title" id="bookCalTitle"></span>
+              <button type="button" class="book-cal-nav" id="bookCalNext" aria-label="Next month">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+              </button>
+            </div>
+            <div class="book-cal-legend">
+              <span><i class="bc-dot bc-dot-avail"></i> Open</span>
+              <span><i class="bc-dot bc-dot-full"></i> Fully booked</span>
+            </div>
+            <div class="book-cal-grid" id="bookCalGrid"></div>
+          </div>
+
+          <!-- Fallback for by_arrangement / always_available services, and
+               for services with no schedule configured yet — kept exactly
+               as before. -->
+          <input type="date" name="appointment_date" id="apptDate" min="<?php echo date('Y-m-d'); ?>" style="display:none;" required>
         </div>
 
         <div class="form-group">

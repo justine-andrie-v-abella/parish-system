@@ -1,0 +1,21 @@
+# Blocks direct HTTP access to files that should never be served as-is —
+# .env (DB password, Supabase service-role key, PayMongo secret key) and the
+# raw SQL schema/migrations were being served as plain text to anyone who
+# requested them by name, since nothing in this project's Apache config was
+# blocking it.
+
+# Any dotfile (.env, .env.*, .git, etc.)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# SQL dumps/migrations — schema and structure shouldn't be public even
+# without data in them.
+<FilesMatch "\.sql$">
+    Require all denied
+</FilesMatch>
+
+# The database/ folder holds only .sql files today, but block the whole
+# directory so a future non-.sql file dropped in there doesn't slip through.
+RewriteEngine On
+RewriteRule ^database/ - [F,L]
