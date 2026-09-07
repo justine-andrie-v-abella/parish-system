@@ -6,6 +6,7 @@
 require_once '../includes/config.php';
 require_role(['parishioner']);
 require_once '../includes/db.php';
+require_once '../includes/slots.php';
 
 header('Content-Type: application/json');
 
@@ -96,25 +97,7 @@ if ($conditional) {
 }
 
 // ---- weekly / nth_weekday: check the picked date against day-of-week rules ----
-$dow = (int) $dt->format('w');
-$dayNum = (int) $dt->format('j');
-$daysInMonth = (int) $dt->format('t');
-$nth = (int) ceil($dayNum / 7);
-$isLastOccurrence = ($dayNum + 7) > $daysInMonth;
-
-$matches = [];
-foreach ($rules as $r) {
-    if ((int) $r['day_of_week'] !== $dow) continue;
-
-    if ($r['rule_type'] === 'weekly') {
-        $matches[] = $r;
-    } elseif ($r['rule_type'] === 'nth_weekday') {
-        $occ = array_map('trim', explode(',', (string) $r['occurrences']));
-        if (in_array((string) $nth, $occ, true) || (in_array('last', $occ, true) && $isLastOccurrence)) {
-            $matches[] = $r;
-        }
-    }
-}
+$matches = match_dated_schedule_rules($rules, $date);
 
 if (!$matches) {
     echo json_encode(['closed' => true, 'slots' => []]);
