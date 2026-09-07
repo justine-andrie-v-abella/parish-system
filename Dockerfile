@@ -3,15 +3,18 @@
 # zero third-party PHP packages (confirmed: no composer.json/vendor/ anywhere).
 FROM php:8.2-apache
 
-# pdo_pgsql needs libpq's headers to build against; mbstring is used by
+# pdo_pgsql needs libpq's headers to build against; mbstring needs
+# oniguruma's headers (libonig-dev) to build its regex support — without it,
+# "docker-php-ext-install mbstring" fails at ./configure with "Package
+# requirements (oniguruma) were not met". mbstring itself is used by
 # ajax/verify-payment.php. curl's extension ships enabled by default on this
-# base image already. Keeping libpq-dev installed (not purging it after the
-# build) trades a slightly larger image for certainty — pulling it back out
-# safely would need is auto-remove not also taking pdo_pgsql's runtime lib
+# base image already. Keeping the -dev packages installed (not purging them
+# after the build) trades a slightly larger image for certainty — pulling
+# them back out safely would need auto-remove to not also take a runtime lib
 # with it, which isn't worth the risk to verify without a way to test the
 # build locally.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpq-dev \
+    && apt-get install -y --no-install-recommends libpq-dev libonig-dev \
     && docker-php-ext-install pdo pdo_pgsql mbstring \
     && rm -rf /var/lib/apt/lists/*
 
