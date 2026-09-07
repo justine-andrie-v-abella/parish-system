@@ -10,18 +10,16 @@ document.addEventListener('DOMContentLoaded', function () {
   var svcFees = document.getElementById('svcFees');
   var svcCategory = document.getElementById('svcCategory');
   var schedSection = document.getElementById('schedSection');
-  var svcCertFields = document.getElementById('svcCertFields');
-  var certFieldsSection = document.getElementById('certFieldsSection');
+  var requirementsSection = document.getElementById('requirementsSection');
   var serviceError = document.getElementById('serviceError');
   var serviceSave = document.getElementById('serviceSave');
 
-  // Sacraments get Schedule Rules (they're booked on a date); certificate
-  // requests get Certificate Form Fields instead (no date, but a
-  // staff-defined set of inputs the requestor fills in) — mutually exclusive.
+  // Mass Intention services are always instant-confirm with no documents
+  // required (see ajax/book-appointment.php), so there's no point letting
+  // staff configure requirements that would never actually be asked for.
   function applyCategoryVisibility() {
-    var isCertificate = svcCategory && svcCategory.value === 'certificate';
-    if (schedSection) schedSection.style.display = isCertificate ? 'none' : '';
-    if (certFieldsSection) certFieldsSection.style.display = isCertificate ? '' : 'none';
+    var isMassIntention = svcCategory && svcCategory.value === 'mass_intention';
+    if (requirementsSection) requirementsSection.style.display = isMassIntention ? 'none' : '';
   }
   if (svcCategory) {
     svcCategory.addEventListener('change', applyCategoryVisibility);
@@ -177,7 +175,6 @@ document.addEventListener('DOMContentLoaded', function () {
     svcFee.value = '';
     svcRequirements.value = '';
     if (svcFees) svcFees.value = '';
-    if (svcCertFields) svcCertFields.value = '';
     if (svcCategory) svcCategory.value = 'sacrament';
     document.querySelectorAll('input[name="svcIcon"]').forEach(function (r) { r.checked = false; });
     if (schedRulesList) schedRulesList.innerHTML = '';
@@ -210,7 +207,6 @@ document.addEventListener('DOMContentLoaded', function () {
       svcFee.value = btn.dataset.fee;
       svcRequirements.value = btn.dataset.requirements;
       if (svcFees) svcFees.value = btn.dataset.fees || '';
-      if (svcCertFields) svcCertFields.value = btn.dataset.certFields || '';
       if (svcCategory) svcCategory.value = btn.dataset.category || 'sacrament';
       applyCategoryVisibility();
       var iconInput = document.getElementById('icon-' + btn.dataset.icon);
@@ -291,7 +287,6 @@ document.addEventListener('DOMContentLoaded', function () {
         requirements: svcRequirements.value,
         fees: svcFees ? svcFees.value : '',
         category: svcCategory ? svcCategory.value : 'sacrament',
-        cert_fields: svcCertFields ? svcCertFields.value : '',
       }),
     })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })

@@ -20,7 +20,7 @@ ob_start();
     <p class="upcoming-empty">You're all caught up.</p>
   <?php else: ?>
     <?php foreach ($notifications as $n): ?>
-      <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>" data-notif-id="<?php echo $n['id']; ?>" data-appointment-id="<?php echo $n['appointment_id'] ?? ''; ?>" data-certificate-id="<?php echo $n['certificate_id'] ?? ''; ?>" data-notif-type="<?php echo htmlspecialchars($n['type'] ?? ''); ?>">
+      <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>" data-notif-id="<?php echo $n['id']; ?>" data-appointment-id="<?php echo $n['appointment_id'] ?? ''; ?>" data-notif-type="<?php echo htmlspecialchars($n['type'] ?? ''); ?>">
         <span class="notif-dot"></span>
         <div>
           <p><?php echo htmlspecialchars(preg_replace('/^DEMO:\s*/', '', $n['message'])); ?></p>
@@ -64,14 +64,16 @@ require_once 'includes/dashboard-header.php';
 .modal-substep.active{ display:block; }
 
 /* ---- Booking calendar (per-service day picker) ---- */
-/* Looks like a normal input field; clicking it pops the calendar open
-   below it, the same interaction as the header's calendar/notification
-   dropdowns — it doesn't sit permanently expanded in the form. */
+/* Looks like a normal input field; clicking it reveals the calendar inline,
+   right below it in the normal page flow — not a floating popover. Stays
+   open across date picks so the slot list beneath it is visible at the
+   same time; dismissed with the explicit "Close calendar" button (or by
+   clicking the field again). */
 .book-cal-trigger{
   display:flex; align-items:center; gap:9px; width:100%; text-align:left;
   border:1px solid var(--line); border-radius: var(--arch-sm); background:#fff;
   padding:10px 12px; font-family:inherit; font-size:13.5px; color: var(--ink);
-  cursor:pointer; transition: border-color .15s;
+  cursor:pointer; transition: border-color .15s; margin-bottom:10px;
 }
 .book-cal-trigger:hover, .book-cal-trigger.open{ border-color: var(--gold); }
 .book-cal-trigger svg{ flex-shrink:0; color: var(--ink-soft); }
@@ -79,21 +81,33 @@ require_once 'includes/dashboard-header.php';
 .book-cal-trigger .bct-chevron{ margin-left:auto; transition: transform .15s; }
 .book-cal-trigger.open .bct-chevron{ transform: rotate(180deg); }
 
-/* Moved to <body> by JS and positioned with fixed coordinates (see
-   .actions-menu elsewhere in the app for the same technique) so it isn't
-   clipped by .modal-box's overflow-y:auto. */
 .book-cal{
-  position:fixed; z-index:1200; width:300px; max-width: calc(100vw - 32px);
+  display:none;
   border:1px solid var(--line); border-radius: var(--arch-sm); padding:14px;
-  background: var(--cream); box-shadow: var(--shadow-lift);
-  opacity:0; transform: translateY(-6px); pointer-events:none; transition: opacity .16s var(--ease), transform .16s var(--ease);
+  background: var(--cream);
 }
-.book-cal.open{ opacity:1; transform:none; pointer-events:auto; }
-.book-cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-.book-cal-title{ font-family: var(--font-mono); font-size:12.5px; font-weight:700; letter-spacing:0.5px; color: var(--navy); }
+.book-cal.open{ display:block; }
+.book-cal-close{
+  display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
+  font-family:inherit; font-size:12px; color: var(--ink-soft); padding:0 0 12px; margin-bottom:12px;
+  border-bottom:1px solid var(--line);
+}
+.book-cal-close:hover{ color: var(--navy); }
+.book-cal-schedule-note{
+  font-size:11.5px; color: var(--gold-dim); background:#fff; border:1px solid var(--line); border-radius:8px;
+  padding:8px 10px; margin:0 0 12px;
+}
+.book-cal-schedule-note:empty{ display:none; }
+.book-cal-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+.book-cal-title{ font-family: var(--font-mono); font-size:12.5px; font-weight:700; letter-spacing:0.5px; color: var(--navy); flex:1; text-align:center; }
+.book-cal-today{
+  font-family: var(--font-mono); font-size:9.5px; letter-spacing:0.5px; text-transform:uppercase; color: var(--ink-soft);
+  background:#fff; border:1px solid var(--line); border-radius:999px; padding:4px 10px; cursor:pointer; transition: all .15s;
+}
+.book-cal-today:hover{ border-color: var(--gold); color: var(--navy); }
 .book-cal-nav{
   width:26px; height:26px; border-radius:50%; border:1px solid var(--line); background:#fff; color: var(--ink-soft);
-  display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all .15s;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all .15s; flex-shrink:0;
 }
 .book-cal-nav:hover{ border-color: var(--gold); color: var(--navy); }
 .book-cal-nav:disabled{ opacity:0.35; cursor:not-allowed; }
@@ -114,6 +128,22 @@ require_once 'includes/dashboard-header.php';
 .book-cal-cell.bc-selected{ background: var(--navy) !important; color:#fff !important; border-color: var(--navy) !important; }
 .book-cal-cell.bc-today{ box-shadow: inset 0 0 0 1.5px var(--gold); }
 .book-cal-empty-note{ grid-column: 1 / -1; text-align:center; font-size:11.5px; color: var(--ink-soft); padding:8px 0; }
+
+/* ---- Donation form radio groups ---- */
+.radio-choice-group{ display:flex; flex-direction:column; gap:8px; }
+.radio-choice-group label{
+  display:flex; align-items:center; gap:9px; font-size:13.5px; font-weight:400; text-transform:none;
+  padding:9px 12px; border:1px solid var(--line); border-radius: var(--arch-sm); cursor:pointer; transition: border-color .15s;
+}
+.radio-choice-group label:has(input:checked){ border-color: var(--gold); background: var(--cream-deep); }
+.radio-choice-group input[type="radio"]{ accent-color: var(--navy); width:15px; height:15px; flex-shrink:0; }
+
+/* ---- Donate link (plain, no box — sits next to the section heading) ---- */
+.donate-link{
+  display:flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer;
+  font-family:inherit; font-size:13px; font-weight:500; color: var(--gold-dim); padding:4px 0;
+}
+.donate-link:hover{ color: var(--navy); }
 </style>
 
 <div class="dash-hero page-hero">
@@ -122,27 +152,27 @@ require_once 'includes/dashboard-header.php';
   <p>Pick a service below to see its requirements and fee, then choose an open date and time.</p>
 </div>
 
-<div class="intentions-grid">
-  <?php
-  $icons = [
-    'dove'   => '<path d="M3 12c3-4 7-6 9-2 2-4 6-2 9 2-3 6-7 4-9 2-2 2-6 4-9-2Z"/><circle cx="12" cy="9" r="1" fill="currentColor" stroke="none"/>',
-    'flame'  => '<path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1.5-1-2-1-2s2 1 2 4a5 5 0 0 1-10 0C6 8 10 7 12 2Z"/>',
-    'rings'  => '<circle cx="9" cy="14" r="5"/><circle cx="15" cy="14" r="5"/>',
-    'cross'  => '<path d="M12 3v18M6 9h12"/>',
-    'candle' => '<path d="M12 2c1 2-1 2.5-1 4a1 1 0 0 0 2 0c0-1.5-2-2-1-4Z"/><rect x="9" y="8" width="6" height="13" rx="1"/><path d="M9 12h6"/>',
-    'vessel' => '<path d="M8 3h8M12 3v4"/><path d="M6 9c0-1.1 2.7-2 6-2s6 .9 6 2-2.7 8-6 10c-3.3-2-6-8.9-6-10Z"/>',
-  ];
-  foreach ($services as $svc):
-    if (($svc['category'] ?? 'sacrament') === 'certificate') continue; // certificates are requested on certificates.php, not booked here
-  ?>
-    <div class="intention-card">
-      <div class="service-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><?php echo $icons[$svc['icon']]; ?></svg>
-      </div>
-      <h3><?php echo htmlspecialchars($svc['name']); ?></h3>
-      <p class="desc"><?php echo htmlspecialchars($svc['desc']); ?></p>
-      <div class="service-fee">Estimated fee: <b><?php echo $svc['fee'] > 0 ? '₱' . number_format($svc['fee']) : 'Free'; ?></b></div>
+<?php
+$icons = [
+  'dove'   => '<path d="M3 12c3-4 7-6 9-2 2-4 6-2 9 2-3 6-7 4-9 2-2 2-6 4-9-2Z"/><circle cx="12" cy="9" r="1" fill="currentColor" stroke="none"/>',
+  'flame'  => '<path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1.5-1-2-1-2s2 1 2 4a5 5 0 0 1-10 0C6 8 10 7 12 2Z"/>',
+  'rings'  => '<circle cx="9" cy="14" r="5"/><circle cx="15" cy="14" r="5"/>',
+  'cross'  => '<path d="M12 3v18M6 9h12"/>',
+  'candle' => '<path d="M12 2c1 2-1 2.5-1 4a1 1 0 0 0 2 0c0-1.5-2-2-1-4Z"/><rect x="9" y="8" width="6" height="13" rx="1"/><path d="M9 12h6"/>',
+  'vessel' => '<path d="M8 3h8M12 3v4"/><path d="M6 9c0-1.1 2.7-2 6-2s6 .9 6 2-2.7 8-6 10c-3.3-2-6-8.9-6-10Z"/>',
+];
 
+function render_intention_card(array $svc, array $icons, array $requirements, array $fees): void {
+  ?>
+  <div class="intention-card">
+    <div class="service-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><?php echo $icons[$svc['icon']]; ?></svg>
+    </div>
+    <h3><?php echo htmlspecialchars($svc['name']); ?></h3>
+    <p class="desc"><?php echo htmlspecialchars($svc['desc']); ?></p>
+    <div class="service-fee">Estimated fee: <b><?php echo $svc['fee'] > 0 ? '₱' . number_format($svc['fee']) : 'Free'; ?></b></div>
+
+    <?php if (!empty($requirements[$svc['key']])): ?>
       <button type="button" class="req-toggle" data-req-toggle>
         <span class="plus">+</span> Requirements
       </button>
@@ -161,17 +191,40 @@ require_once 'includes/dashboard-header.php';
           </ul>
         <?php endif; ?>
       </div>
+    <?php elseif (($svc['category'] ?? 'sacrament') === 'mass_intention'): ?>
+      <p class="slot-hint">No documents needed — instantly confirmed once requested.</p>
+    <?php endif; ?>
 
-      <button type="button" class="btn btn-gold btn-book"
-        data-book-btn
-        data-service-key="<?php echo htmlspecialchars($svc['key']); ?>"
-        data-service-name="<?php echo htmlspecialchars($svc['name']); ?>"
-        data-service-fee="<?php echo (int) $svc['fee']; ?>"
-        data-requirements="<?php echo htmlspecialchars(json_encode($requirements[$svc['key']] ?? [])); ?>">
-        Request This
-      </button>
-    </div>
-  <?php endforeach; ?>
+    <button type="button" class="btn btn-gold btn-book"
+      data-book-btn
+      data-service-key="<?php echo htmlspecialchars($svc['key']); ?>"
+      data-service-name="<?php echo htmlspecialchars($svc['name']); ?>"
+      data-service-fee="<?php echo (int) $svc['fee']; ?>"
+      data-requirements="<?php echo htmlspecialchars(json_encode($requirements[$svc['key']] ?? [])); ?>">
+      Request This
+    </button>
+  </div>
+  <?php
+}
+
+$activeTab = ($_GET['tab'] ?? 'mass') === 'sacraments' ? 'sacraments' : 'mass';
+$activeCategory = $activeTab === 'sacraments' ? 'sacrament' : 'mass_intention';
+$tabLabel = $activeTab === 'sacraments' ? 'Sacraments' : 'Mass Intentions';
+?>
+
+<div class="dash-section-label">
+  <h2><?php echo $tabLabel; ?></h2>
+  <button type="button" class="donate-link donate-trigger">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.5-9.5-9C.5 8 2 4 6 4c2 0 3.5 1 4 2 .5-1 2-2 4-2 4 0 5.5 4 3.5 8-2.5 4.5-9.5 9-9.5 9Z"/></svg>
+    Donate
+  </button>
+</div>
+
+<div class="intentions-grid">
+  <?php foreach ($services as $svc):
+    if (($svc['category'] ?? 'sacrament') !== $activeCategory) continue;
+    render_intention_card($svc, $icons, $requirements, $fees);
+  endforeach; ?>
 </div>
 
 <!-- ===== Booking modal ===== -->
@@ -226,10 +279,13 @@ require_once 'includes/dashboard-header.php';
           </button>
 
           <div id="bookCal" class="book-cal">
+            <button type="button" class="book-cal-close" id="bookCalClose">&times; Close calendar</button>
+            <p class="book-cal-schedule-note" id="bookCalScheduleNote"></p>
             <div class="book-cal-head">
               <button type="button" class="book-cal-nav" id="bookCalPrev" aria-label="Previous month">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
               </button>
+              <button type="button" class="book-cal-today" id="bookCalToday">Today</button>
               <span class="book-cal-title" id="bookCalTitle"></span>
               <button type="button" class="book-cal-nav" id="bookCalNext" aria-label="Next month">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
@@ -293,6 +349,68 @@ require_once 'includes/dashboard-header.php';
   </div>
 </div>
 
+<!-- ===== Donation modal ===== -->
+<div class="modal-overlay" id="donateModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>Make a Donation</h3>
+      <button type="button" class="modal-close" id="donateModalClose" aria-label="Close">&times;</button>
+    </div>
+
+    <form id="donateForm">
+      <div class="form-group">
+        <label for="donorName">Donor Name <span style="text-transform:none;">(optional — leave blank to give anonymously)</span></label>
+        <input type="text" id="donorName" maxlength="150" placeholder="Your name">
+      </div>
+
+      <div class="form-group">
+        <label for="donorEmail">Email Address</label>
+        <input type="email" id="donorEmail" required maxlength="150" placeholder="you@example.com">
+      </div>
+
+      <div class="form-group">
+        <label for="donationAmount">Donation Amount (₱)</label>
+        <input type="number" id="donationAmount" min="1" step="1" required placeholder="500">
+      </div>
+
+      <div class="form-group">
+        <label>Purpose of Donation</label>
+        <div class="radio-choice-group">
+          <label><input type="radio" name="donationPurpose" value="general" checked> General Donation</label>
+          <label><input type="radio" name="donationPurpose" value="maintenance"> Church Maintenance</label>
+          <label><input type="radio" name="donationPurpose" value="charity"> Charity</label>
+          <label><input type="radio" name="donationPurpose" value="mass_activities"> Mass/Parish Activities</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Payment Method</label>
+        <div class="radio-choice-group">
+          <label><input type="radio" name="donationMethod" value="gcash" checked> GCash</label>
+          <label><input type="radio" name="donationMethod" value="maya"> Maya</label>
+          <label><input type="radio" name="donationMethod" value="paypal"> PayPal</label>
+          <label><input type="radio" name="donationMethod" value="card"> Credit/Debit Card</label>
+        </div>
+        <p class="slot-hint" id="donationMethodHint" style="display:none;">This method isn't processed automatically yet — after submitting, the parish office will reach out to confirm your payment.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="donationMessage">Message (optional)</label>
+        <textarea id="donationMessage" maxlength="500" placeholder="A short note to the parish, if you'd like."></textarea>
+      </div>
+
+      <p class="form-error" id="donateError"></p>
+      <p class="form-success" id="donateSuccess"></p>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline btn-sm" id="donateCancel">Cancel</button>
+        <button type="submit" class="btn btn-gold btn-sm" id="donateSubmit">Donate Now</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="assets/js/intentions.js?v=<?php echo time(); ?>"></script>
+<script src="assets/js/donations.js?v=<?php echo time(); ?>"></script>
 
 <?php require_once 'includes/dashboard-footer.php'; ?>

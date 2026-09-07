@@ -73,6 +73,9 @@
 }
 .pm-chip.cash{ background:#EAF5EC; color:#2F6B45; }
 .pm-chip.gcash{ background:#E6ECFA; color:#33488A; }
+.pm-chip.maya{ background:#FBEAF0; color:#8A2D52; }
+.pm-chip.paypal{ background:#E7F0FB; color:#1F4E96; }
+.pm-chip.card{ background:#F3EFFA; color:#5B3E96; }
 
 .pay-status-chip{
   display:inline-block; font-family: var(--font-mono); font-size:10px;

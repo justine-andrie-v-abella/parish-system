@@ -56,6 +56,12 @@ $notifStmt->execute([$uid]);
 $notifications = $notifStmt->fetchAll();
 $unreadCount = count(array_filter($notifications, fn($n) => !is_true($n['is_read'])));
 
+// ---------------- Latest announcements ----------------
+$announcementsReady = $pdo->query("SELECT to_regclass('public.announcements')")->fetchColumn() !== null;
+$latestAnnouncements = $announcementsReady
+    ? $pdo->query("SELECT * FROM announcements WHERE is_active = true ORDER BY created_at DESC LIMIT 3")->fetchAll()
+    : [];
+
 // ---------------- Calendar (current month, or ?month=&year=) ----------------
 $month = isset($_GET['month']) ? max(1, min(12, (int) $_GET['month'])) : (int) date('n');
 $year  = isset($_GET['year'])  ? (int) $_GET['year'] : (int) date('Y');
@@ -196,7 +202,7 @@ ob_start();
   <p class="upcoming-empty">You're all caught up.</p>
 <?php else: ?>
   <?php foreach ($notifications as $n): ?>
-    <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>" data-notif-id="<?php echo $n['id']; ?>" data-appointment-id="<?php echo $n['appointment_id'] ?? ''; ?>" data-certificate-id="<?php echo $n['certificate_id'] ?? ''; ?>" data-notif-type="<?php echo htmlspecialchars($n['type'] ?? ''); ?>">
+    <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>" data-notif-id="<?php echo $n['id']; ?>" data-appointment-id="<?php echo $n['appointment_id'] ?? ''; ?>" data-notif-type="<?php echo htmlspecialchars($n['type'] ?? ''); ?>">
       <span class="notif-dot"></span>
       <div>
         <p><?php echo htmlspecialchars(preg_replace('/^DEMO:\s*/', '', $n['message'])); ?></p>
@@ -267,6 +273,19 @@ require_once 'includes/dashboard-header.php';
   </div>
 </div>
 
+<?php if ($latestAnnouncements): ?>
+<div class="dash-section-label"><h2>Latest Announcements</h2><a href="announcements.php" style="font-family:var(--font-mono); font-size:11.5px; letter-spacing:0.5px; color:var(--gold-dim); text-decoration:none;">View all →</a></div>
+<div class="panel" style="margin-bottom:28px;">
+  <?php foreach ($latestAnnouncements as $i => $a): ?>
+    <div style="<?php echo $i > 0 ? 'margin-top:16px; padding-top:16px; border-top:1px dashed var(--line);' : ''; ?>">
+      <h3 style="font-size:15px; margin:0 0 4px;"><?php echo htmlspecialchars($a['title']); ?></h3>
+      <p style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.5px; text-transform:uppercase; color:var(--ink-soft); margin:0 0 8px;"><?php echo date('F j, Y', strtotime($a['created_at'])); ?></p>
+      <p style="font-size:13px; color:var(--ink); margin:0; white-space:pre-wrap;"><?php echo htmlspecialchars(mb_strimwidth($a['body'], 0, 220, '…')); ?></p>
+    </div>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
 <!-- Quick actions -->
 <div class="dash-section-label"><h2>Quick Actions</h2></div>
 <div class="quick-actions">
@@ -278,9 +297,9 @@ require_once 'includes/dashboard-header.php';
     <div class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18M3 12h18M3 18h18"/></svg></div>
     <span>View Requests</span>
   </a>
-  <a href="certificates.php" class="quick-action">
-    <div class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></div>
-    <span>Certificates</span>
+  <a href="announcements.php" class="quick-action">
+    <div class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6l-4 4H4a1 1 0 0 0-1 1Z"/><path d="M16 8a4 4 0 0 1 0 8"/><path d="M19 5a8 8 0 0 1 0 14"/></svg></div>
+    <span>Announcements</span>
   </a>
   <a href="index.php#services" class="quick-action">
     <div class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>

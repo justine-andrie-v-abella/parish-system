@@ -44,7 +44,7 @@ $services = [
         'desc' => 'Sacred union of marriage witnessed before God and the parish.', 'fee' => 3500],
     ['key' => 'burial', 'icon' => 'cross', 'name' => 'Burial Mass',
         'desc' => 'A Mass of Christian burial to commend the departed to God.', 'fee' => 1500],
-    ['key' => 'intention', 'icon' => 'candle', 'name' => 'Mass Intention',
+    ['key' => 'intention', 'icon' => 'candle', 'name' => 'Mass Intention', 'category' => 'mass_intention',
         'desc' => 'Offer a Mass for a special intention, thanksgiving, or the departed.', 'fee' => 150],
     ['key' => 'anointing', 'icon' => 'vessel', 'name' => 'Anointing of the Sick',
         'desc' => 'Spiritual comfort and healing grace for the sick and elderly.', 'fee' => 0],
@@ -67,17 +67,6 @@ $requirements = [
  * once database/migration_add_service_fees.sql has been run.
  */
 $fees = [];
-
-/**
- * Staff-defined input fields per certificate-request service (e.g. baptismal
- * certificate: "Full Name of Registrant", "Birthday / Year of Birth", "Year
- * of Baptism"). Each entry is just the field's label — certificates.php
- * renders one text input per label, in order, and stores what the
- * requestor typed as {label: value} JSON keyed by these same labels.
- * Empty here in the hardcoded fallback; populated from service_form_fields
- * below once database/migration_add_certificate_form_fields.sql has been run.
- */
-$certFields = [];
 
 // Staff roles allowed on the internal (non-parishioner) login/registration pages.
 $staff_roles = [
@@ -116,9 +105,9 @@ try {
     $catalogPdo = $pdo;
 
     if ($catalogPdo->query("SELECT to_regclass('public.services')")->fetchColumn() !== null) {
-        // The `category` column only exists once migration_add_certificate_requests.sql
-        // has been run — check first so an un-migrated install doesn't lose the
-        // entire live catalog to the hardcoded fallback over one missing column.
+        // The `category` column only exists once a category migration has been
+        // run — check first so an un-migrated install doesn't lose the entire
+        // live catalog to the hardcoded fallback over one missing column.
         $hasCategory = $catalogPdo->query(
             "SELECT 1 FROM information_schema.columns WHERE table_name = 'services' AND column_name = 'category'"
         )->fetchColumn() !== false;
@@ -158,15 +147,6 @@ try {
                 }
             }
 
-            if ($catalogPdo->query("SELECT to_regclass('public.service_form_fields')")->fetchColumn() !== null) {
-                $certFields = [];
-                $fieldRows = $catalogPdo->query(
-                    "SELECT service_key, field_label FROM service_form_fields ORDER BY service_key, sort_order ASC, id ASC"
-                )->fetchAll();
-                foreach ($fieldRows as $f) {
-                    $certFields[$f['service_key']][] = $f['field_label'];
-                }
-            }
         }
     }
     unset($catalogPdo);

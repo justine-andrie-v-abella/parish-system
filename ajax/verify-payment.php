@@ -21,12 +21,12 @@ if ($id <= 0) {
     exit;
 }
 
-// 'appointment' (default) or 'certificate' — the two request kinds share
-// identical payment columns by design (see migration_add_certificate_requests.sql),
-// so this endpoint just targets the right table instead of duplicating itself.
-$type = ($_POST['type'] ?? 'appointment') === 'certificate' ? 'certificate' : 'appointment';
-$table = $type === 'certificate' ? 'certificate_requests' : 'appointments';
-$entityType = $type === 'certificate' ? 'certificate_request' : 'appointment';
+// 'appointment' (default) or 'donation' — both share identical payment
+// columns by design (see migration_add_donations.sql), so this endpoint
+// just targets the right table instead of duplicating itself.
+$type = ($_POST['type'] ?? 'appointment') === 'donation' ? 'donation' : 'appointment';
+$table = $type === 'donation' ? 'donations' : 'appointments';
+$entityType = $type === 'donation' ? 'donation' : 'appointment';
 
 $receiptNumber = trim((string) ($_POST['receipt_number'] ?? ''));
 if ($receiptNumber === '') {
@@ -73,12 +73,12 @@ try {
     }
 
     // Manual receipt numbers must be unique across both appointments and
-    // certificate requests — they're issued from the same physical booklet.
+    // donations — they're issued from the same physical booklet.
     $dupeAppt = $pdo->prepare("SELECT id FROM appointments WHERE receipt_number = ? AND NOT (id = ? AND ? = 'appointment')");
     $dupeAppt->execute([$receiptNumber, $id, $type]);
-    $dupeCert = $pdo->prepare("SELECT id FROM certificate_requests WHERE receipt_number = ? AND NOT (id = ? AND ? = 'certificate')");
-    $dupeCert->execute([$receiptNumber, $id, $type]);
-    if ($dupeAppt->fetch() || $dupeCert->fetch()) {
+    $dupeDonation = $pdo->prepare("SELECT id FROM donations WHERE receipt_number = ? AND NOT (id = ? AND ? = 'donation')");
+    $dupeDonation->execute([$receiptNumber, $id, $type]);
+    if ($dupeAppt->fetch() || $dupeDonation->fetch()) {
         $pdo->rollBack();
         http_response_code(409);
         echo json_encode(['error' => 'That receipt number is already in use on another request.']);
@@ -92,11 +92,16 @@ try {
     );
     $update->execute([$treasurerId, $receiptNumber, $id]);
 
-    $serviceNames = array_column($services, 'name', 'key');
-    $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key']);
-    $message = "Payment verified for your {$svcLabel} request. Receipt #{$receiptNumber} is ready.";
+    if ($type === 'donation') {
+        $svcLabel = 'donation';
+        $message = "Thank you — your donation of ₱" . number_format($appt['amount']) . " has been verified. Receipt #{$receiptNumber} is ready.";
+    } else {
+        $serviceNames = array_column($services, 'name', 'key');
+        $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key']);
+        $message = "Payment verified for your {$svcLabel} request. Receipt #{$receiptNumber} is ready.";
+    }
 
-    notify_user($pdo, $appt['user_id'], $message, 'payment', $type === 'appointment' ? $id : null, $type === 'certificate' ? $id : null);
+    notify_user($pdo, $appt['user_id'], $message, 'payment', $type === 'appointment' ? $id : null);
 
     $pdo->commit();
 

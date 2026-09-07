@@ -32,10 +32,17 @@ if (strlen($notes) > 255) {
     $notes = substr($notes, 0, 255);
 }
 
+// Mass Intention category services are always instant-confirm with no
+// documents required — enforced here regardless of what's configured in
+// Catalog (see ajax/save-service.php, which already blanks requirements
+// server-side for this category too; this is belt-and-suspenders).
+$serviceCategories = array_column($services, 'category', 'key');
+$isMassIntention = ($serviceCategories[$serviceKey] ?? 'sacrament') === 'mass_intention';
+
 // One upload slot per requirement line (req_doc_0, req_doc_1, ...) — every
 // requirement needs its own document. Services with no requirements (e.g.
 // Mass Intention) skip this entirely.
-$reqList = $requirements[$serviceKey] ?? [];
+$reqList = $isMassIntention ? [] : ($requirements[$serviceKey] ?? []);
 $hasRequirements = !empty($reqList);
 
 $docResult = save_requirement_documents($reqList);
@@ -190,12 +197,19 @@ try {
         }
     }
 
+    // Mass Intention bookings skip the pending-approval queue entirely —
+    // there's nothing for staff to review (no documents, no judgment call),
+    // so it goes straight to the same 'confirmed' state a manual approval
+    // would set (see ajax/approve-request.php).
+    $initialStatus = $isMassIntention ? 'confirmed' : 'pending';
+    $handledAt = $isMassIntention ? date('Y-m-d H:i:s') : null;
+
     $insert = $pdo->prepare(
         "INSERT INTO appointments
-            (user_id, service_key, appointment_date, appointment_time, notes, status, payment_status, documents_status)
-         VALUES (?, ?, ?, ?, ?, 'pending', 'unpaid', ?)"
+            (user_id, service_key, appointment_date, appointment_time, notes, status, payment_status, documents_status, handled_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'unpaid', ?, ?)"
     );
-    $insert->execute([$uid, $serviceKey, $finalDate, $finalTime, $notes ?: null, $documentsStatus]);
+    $insert->execute([$uid, $serviceKey, $finalDate, $finalTime, $notes ?: null, $initialStatus, $documentsStatus, $handledAt]);
     $newId = (int) $pdo->lastInsertId();
 
     if ($docResult['files']) {

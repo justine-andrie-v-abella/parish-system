@@ -1,12 +1,12 @@
 <?php
 require_once 'includes/config.php';
-require_role(['treasurer', 'parishioner']);
+require_role(['treasurer', 'priest', 'parishioner']);
 require_once 'includes/db.php';
 require_once 'includes/payments.php';
 
 $id = (int) ($_GET['id'] ?? 0);
-$type = ($_GET['type'] ?? 'appointment') === 'certificate' ? 'certificate' : 'appointment';
-$table = $type === 'certificate' ? 'certificate_requests' : 'appointments';
+$type = ($_GET['type'] ?? 'appointment') === 'donation' ? 'donation' : 'appointment';
+$table = $type === 'donation' ? 'donations' : 'appointments';
 
 $stmt = $pdo->prepare(
     "SELECT a.*, u.full_name, u.email, v.full_name AS verified_by_name
@@ -34,10 +34,17 @@ if ($appt['payment_status'] !== 'paid') {
     die('No receipt is available for this request yet — payment has not been verified.');
 }
 
-$serviceNames = array_column($services, 'name', 'key');
-$feeMap = get_fee_map($services);
-$amount = payment_amount($appt['service_key'], $feeMap);
-$svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key']);
+$purposeLabels = ['general' => 'General Donation', 'maintenance' => 'Church Maintenance', 'charity' => 'Charity', 'mass_activities' => 'Mass/Parish Activities'];
+
+if ($type === 'donation') {
+    $amount = (int) $appt['amount'];
+    $svcLabel = 'Donation — ' . ($purposeLabels[$appt['purpose']] ?? ucfirst($appt['purpose']));
+} else {
+    $serviceNames = array_column($services, 'name', 'key');
+    $feeMap = get_fee_map($services);
+    $amount = payment_amount($appt['service_key'], $feeMap);
+    $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -92,15 +99,11 @@ $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key'])
 
   <div class="r-rows">
     <div class="r-row"><span>Received From</span><span><?php echo htmlspecialchars($appt['full_name']); ?></span></div>
-    <div class="r-row"><span>Service</span><span><?php echo htmlspecialchars($svcLabel); ?></span></div>
-    <?php if ($type === 'certificate'):
-      $fieldValues = json_decode($appt['field_values'] ?? '{}', true) ?: [];
-    ?>
-      <?php foreach ($fieldValues as $label => $value): ?>
-        <?php if ($value !== '' && $value !== null): ?>
-          <div class="r-row"><span><?php echo htmlspecialchars($label); ?></span><span><?php echo htmlspecialchars($value); ?></span></div>
-        <?php endif; ?>
-      <?php endforeach; ?>
+    <div class="r-row"><span><?php echo $type === 'donation' ? 'Purpose' : 'Service'; ?></span><span><?php echo htmlspecialchars($svcLabel); ?></span></div>
+    <?php if ($type === 'donation'): ?>
+      <?php if (!empty($appt['donor_name'])): ?>
+        <div class="r-row"><span>Donor Name</span><span><?php echo htmlspecialchars($appt['donor_name']); ?></span></div>
+      <?php endif; ?>
     <?php else: ?>
       <div class="r-row"><span>Appointment Date</span><span><?php echo date('F j, Y', strtotime($appt['appointment_date'])); ?></span></div>
     <?php endif; ?>
@@ -125,7 +128,13 @@ $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key'])
 
 <div class="actions">
   <button type="button" onclick="window.print()">Print / Save as PDF</button>
-  <a href="<?php echo $_SESSION['role'] === 'treasurer' ? 'payments.php' : ($type === 'certificate' ? 'certificates.php' : 'requests.php'); ?>" class="secondary">← Back</a>
+  <a href="<?php
+    if (in_array($_SESSION['role'], ['treasurer', 'priest'], true)) {
+        echo $type === 'donation' ? 'donations.php' : 'payments.php';
+    } else {
+        echo $type === 'donation' ? 'intentions.php' : 'requests.php';
+    }
+  ?>" class="secondary">← Back</a>
 </div>
 
 </body>

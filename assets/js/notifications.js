@@ -100,7 +100,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var notifId = item.dataset.notifId;
     var apptId = item.dataset.appointmentId;
-    var certId = item.dataset.certificateId;
     var notifType = item.dataset.notifType;
 
     if (item.classList.contains('unread')) {
@@ -120,8 +119,6 @@ document.addEventListener('DOMContentLoaded', function () {
       openReschedule(apptId);
     } else if (apptId) {
       window.location.href = 'requests.php?focus=' + encodeURIComponent(apptId);
-    } else if (certId) {
-      window.location.href = 'certificates.php?focus=' + encodeURIComponent(certId);
     }
   }, true);
 

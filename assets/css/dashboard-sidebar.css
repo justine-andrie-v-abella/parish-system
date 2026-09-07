@@ -70,6 +70,41 @@
 .sidebar-icon svg{ width:100%; height:100%; }
 .sidebar-link.active .sidebar-icon{ color: var(--navy-deep); }
 
+/* ---------------- Expandable sub-menu (e.g. My Intentions > Mass Intentions / Sacraments) ---------------- */
+.sidebar-link-group{ display:flex; flex-direction:column; }
+.sidebar-link-parent{
+  width:100%; background:none; border:1px solid transparent; cursor:pointer;
+  font-family:inherit; text-align:left;
+}
+/* Parent only reads as "active" via the gold highlight when a sub-item is
+   actually selected — otherwise it stays neutral even while expanded, so
+   expanded-but-nothing-chosen doesn't look identical to a real selection. */
+.sidebar-link-group.active > .sidebar-link-parent{
+  background: var(--gold); border-color: var(--gold); color: var(--navy-deep); font-weight:600;
+}
+.sidebar-link-group.active > .sidebar-link-parent .sidebar-icon{ color: var(--navy-deep); }
+.sidebar-chevron{ width:14px; height:14px; margin-left:auto; flex-shrink:0; transition: transform .18s var(--ease); }
+.sidebar-link-group.expanded .sidebar-chevron{ transform: rotate(180deg); }
+
+.sidebar-submenu{
+  overflow:hidden; max-height:0; transition: max-height .22s var(--ease);
+  display:flex; flex-direction:column; gap:2px;
+}
+.sidebar-link-group.expanded .sidebar-submenu{ max-height:200px; }
+.sidebar-sublink{
+  display:flex; align-items:center; padding:9px 14px 9px 46px; margin-top:2px;
+  border-radius:10px; font-size:13px; color: rgba(250,246,238,0.6); font-weight:500;
+  border:1px solid transparent; transition: all .15s; white-space:nowrap;
+}
+.sidebar-sublink:hover{ background: rgba(250,246,238,0.08); color:#fff; }
+.sidebar-sublink.active{ background: rgba(201,162,39,0.16); border-color: rgba(201,162,39,0.4); color: var(--gold-bright); font-weight:600; }
+
+/* Collapsed desktop rail: no room for a sub-menu — the parent button just
+   becomes a normal icon link straight to the page (JS drops the toggle
+   behavior in this state; see sidebar-collapse.js). */
+#dashSidebar.collapsed .sidebar-submenu{ display:none; }
+#dashSidebar.collapsed .sidebar-chevron{ display:none; }
+
 /* ---------------- Collapse / expand (desktop only) ----------------
    Sits inline in the user row (not floating on the sidebar's edge, which
    read as a half-clipped stray button against the page background). */

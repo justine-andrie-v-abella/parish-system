@@ -20,7 +20,7 @@ ob_start();
     <p class="upcoming-empty">You're all caught up.</p>
   <?php else: ?>
     <?php foreach ($notifications as $n): ?>
-      <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>" data-notif-id="<?php echo $n['id']; ?>" data-appointment-id="<?php echo $n['appointment_id'] ?? ''; ?>" data-certificate-id="<?php echo $n['certificate_id'] ?? ''; ?>" data-notif-type="<?php echo htmlspecialchars($n['type'] ?? ''); ?>">
+      <div class="notif-item<?php echo is_true($n['is_read']) ? '' : ' unread'; ?>" data-notif-id="<?php echo $n['id']; ?>" data-appointment-id="<?php echo $n['appointment_id'] ?? ''; ?>" data-notif-type="<?php echo htmlspecialchars($n['type'] ?? ''); ?>">
         <span class="notif-dot"></span>
         <div><p><?php echo htmlspecialchars(preg_replace('/^DEMO:\s*/', '', $n['message'])); ?></p>
         <span class="time"><?php echo date('M j, g:i A', strtotime($n['created_at'])); ?></span></div>
@@ -44,19 +44,15 @@ $schedulesReady = $pdo->query("SELECT to_regclass('public.service_schedules')")-
 // ---------------- Check the itemized-fees migration has been applied ----------------
 $feesReady = $pdo->query("SELECT to_regclass('public.service_fees')")->fetchColumn() !== null;
 
-// ---------------- Check the certificate-requests migration has been applied ----------------
+// ---------------- Check the category column has been applied ----------------
 $categoryReady = $catalogReady && $pdo->query(
     "SELECT 1 FROM information_schema.columns WHERE table_name = 'services' AND column_name = 'category'"
 )->fetchColumn() !== false;
-
-// ---------------- Check the certificate form-fields migration has been applied ----------------
-$certFieldsReady = $pdo->query("SELECT to_regclass('public.service_form_fields')")->fetchColumn() !== null;
 
 $catalogRows = [];
 $catalogRequirements = [];
 $catalogSchedules = [];
 $catalogFees = [];
-$catalogCertFields = [];
 if ($catalogReady) {
     $catalogRows = $pdo->query("SELECT * FROM services ORDER BY sort_order ASC, id ASC")->fetchAll();
     $reqRows = $pdo->query("SELECT * FROM service_requirements ORDER BY service_key, sort_order ASC, id ASC")->fetchAll();
@@ -81,12 +77,6 @@ if ($catalogReady) {
         }
     }
 
-    if ($certFieldsReady) {
-        $fieldRows = $pdo->query("SELECT * FROM service_form_fields ORDER BY service_key, sort_order ASC, id ASC")->fetchAll();
-        foreach ($fieldRows as $r) {
-            $catalogCertFields[$r['service_key']][] = $r['field_label'];
-        }
-    }
 }
 
 $page_title = 'Service Catalog — ' . $parish['name'];
@@ -224,21 +214,10 @@ function summarize_schedule(array $rules, array $dowLabels): string {
 
   <?php if (!$categoryReady): ?>
     <div class="panel" style="margin-bottom:28px; border-color: var(--gold);">
-      <h3>Certificate requests migration not applied yet</h3>
+      <h3>Category migration not applied yet</h3>
       <p style="font-size:13.5px; color:var(--ink-soft);">
-        Import <code>database/migration_add_certificate_requests.sql</code> (Supabase SQL Editor) to add the
-        Category field (Sacrament vs Certificate Request) and the four certificate-request service entries.
-      </p>
-    </div>
-  <?php endif; ?>
-
-  <?php if (!$certFieldsReady): ?>
-    <div class="panel" style="margin-bottom:28px; border-color: var(--gold);">
-      <h3>Certificate form fields migration not applied yet</h3>
-      <p style="font-size:13.5px; color:var(--ink-soft);">
-        Import <code>database/migration_add_certificate_form_fields.sql</code> (Supabase SQL Editor) to let
-        certificate-request services define which input fields the requestor fills in (e.g. "Full Name of
-        Registrant", "Year of Baptism"). Until then, Certificate Request services have no configurable fields.
+        Import <code>database/migration_remove_certificates.sql</code> (Supabase SQL Editor) to add the
+        Category field (Mass Intention vs Sacrament).
       </p>
     </div>
   <?php endif; ?>
@@ -252,7 +231,6 @@ function summarize_schedule(array $rules, array $dowLabels): string {
         $reqLines = $catalogRequirements[$s['service_key']] ?? [];
         $schedRules = $catalogSchedules[$s['service_key']] ?? [];
         $feeLines = $catalogFees[$s['service_key']] ?? [];
-        $certFieldLines = $catalogCertFields[$s['service_key']] ?? [];
         $usage = $usageCounts[$s['service_key']] ?? 0;
         $svcCategory = $s['category'] ?? 'sacrament';
     ?>
@@ -262,12 +240,15 @@ function summarize_schedule(array $rules, array $dowLabels): string {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20"><?php echo $icons[$s['icon']] ?? $icons['candle']; ?></svg>
         </div>
         <?php if ($categoryReady): ?>
-          <span style="display:inline-block; font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.5px; text-transform:uppercase; color:var(--ink-soft); background:var(--cream-deep); padding:2px 8px; border-radius:999px; margin-top:8px;"><?php echo $svcCategory === 'certificate' ? 'Certificate Request' : 'Sacrament'; ?></span>
+          <span style="display:inline-block; font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.5px; text-transform:uppercase; color:var(--ink-soft); background:var(--cream-deep); padding:2px 8px; border-radius:999px; margin-top:8px;"><?php echo $svcCategory === 'mass_intention' ? 'Mass Intention' : 'Sacrament'; ?></span>
         <?php endif; ?>
         <h3><?php echo htmlspecialchars($s['name']); ?></h3>
         <p class="desc"><?php echo htmlspecialchars($s['description']); ?></p>
-        <?php if ($schedulesReady && $svcCategory !== 'certificate'): ?>
+        <?php if ($schedulesReady): ?>
           <div class="schedule-summary"><?php echo htmlspecialchars(summarize_schedule($schedRules, $dowLabels)); ?></div>
+        <?php endif; ?>
+        <?php if ($svcCategory === 'mass_intention'): ?>
+          <div class="schedule-summary" style="background:var(--cream); color:var(--gold-dim);">Auto-approved · no documents required</div>
         <?php endif; ?>
         <div class="fee">₱<?php echo number_format($s['fee']); ?> · <?php echo $usage; ?> request<?php echo $usage === 1 ? '' : 's'; ?> on file</div>
         <?php if ($feesReady && $feeLines): ?>
@@ -289,7 +270,6 @@ function summarize_schedule(array $rules, array $dowLabels): string {
             data-category="<?php echo htmlspecialchars($svcCategory); ?>"
             data-requirements="<?php echo htmlspecialchars(implode("\n", $reqLines)); ?>"
             data-fees="<?php echo htmlspecialchars(implode("\n", array_map(fn($f) => $f['label'] . ' | ' . $f['amount'] . ($f['note'] ? ' | ' . $f['note'] : ''), $feeLines))); ?>"
-            data-cert-fields="<?php echo htmlspecialchars(implode("\n", $certFieldLines)); ?>"
             data-schedules="<?php echo htmlspecialchars(json_encode(array_map(function($r) {
                 return [
                     'rule_type'     => $r['rule_type'],
@@ -330,8 +310,8 @@ function summarize_schedule(array $rules, array $dowLabels): string {
         <?php if ($categoryReady): ?>
         <label for="svcCategory">Category</label>
         <select id="svcCategory">
-          <option value="sacrament">Sacrament / Rite — booked on a date (shown on Intentions)</option>
-          <option value="certificate">Certificate Request — no date, requested on Certificates</option>
+          <option value="sacrament">Sacrament — booked on a date, needs staff approval</option>
+          <option value="mass_intention">Mass Intention — instant confirm, no documents required</option>
         </select>
         <?php endif; ?>
 
@@ -348,8 +328,10 @@ function summarize_schedule(array $rules, array $dowLabels): string {
           <?php endforeach; ?>
         </div>
 
-        <label for="svcRequirements">Requirements (one per line)</label>
-        <textarea id="svcRequirements" placeholder="Valid ID&#10;Birth Certificate&#10;..."></textarea>
+        <div id="requirementsSection">
+          <label for="svcRequirements">Requirements (one per line)</label>
+          <textarea id="svcRequirements" placeholder="Valid ID&#10;Birth Certificate&#10;..."></textarea>
+        </div>
 
         <?php if ($feesReady): ?>
         <label for="svcFees">Itemized Fees <span style="text-transform:none;">(one per line: Label | Amount | Note — note is optional)</span></label>
@@ -361,13 +343,6 @@ function summarize_schedule(array $rules, array $dowLabels): string {
           <label>Schedule Rules <span style="text-transform:none;">— when is this service actually offered?</span></label>
           <div id="schedRulesList"></div>
           <button type="button" class="sched-add-btn" id="addScheduleRuleBtn">+ Add schedule rule</button>
-        </div>
-        <?php endif; ?>
-
-        <?php if ($certFieldsReady): ?>
-        <div class="sched-section" id="certFieldsSection" style="display:none;">
-          <label for="svcCertFields">Certificate Form Fields <span style="text-transform:none;">(one per line — what the requestor types in, e.g. "Full Name of Registrant")</span></label>
-          <textarea id="svcCertFields" placeholder="Full Name of Registrant&#10;Birthday / Year of Birth&#10;Year of Baptism"></textarea>
         </div>
         <?php endif; ?>
 

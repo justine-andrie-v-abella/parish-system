@@ -62,11 +62,12 @@ if (!verifyPaymongoSignature($rawPayload, $signatureHeader, PAYMONGO_WEBHOOK_SEC
 $data = json_decode($rawPayload, true);
 $eventType = $data['data']['attributes']['type'] ?? null;
 
-// Certificate requests share the same paymongo_source_id column but live in
-// a separate table (no appointment date/schedule concept — see
-// migration_add_certificate_requests.sql), so each source id is looked up
-// in both places.
-$certTableReady = $pdo->query("SELECT to_regclass('public.certificate_requests')")->fetchColumn() !== null;
+// Donations share the same paymongo_source_id column but live in a
+// separate table (no appointment date/schedule concept, and the amount is
+// whatever the donor chose rather than a fixed service fee — see
+// migration_add_donations.sql), so each source id is looked up in both
+// places.
+$donationsTableReady = $pdo->query("SELECT to_regclass('public.donations')")->fetchColumn() !== null;
 
 if ($eventType === 'source.chargeable') {
     $sourceId = $data['data']['attributes']['data']['id'] ?? null;
@@ -76,18 +77,19 @@ if ($eventType === 'source.chargeable') {
         $stmt->execute([$sourceId]);
         $appt = $stmt->fetch();
 
-        if (!$appt && $certTableReady) {
-            $stmt = $pdo->prepare('SELECT id, service_key FROM certificate_requests WHERE paymongo_source_id = ?');
-            $stmt->execute([$sourceId]);
-            $appt = $stmt->fetch();
-        }
-
         if ($appt) {
             global $services;
             $serviceFees = array_column($services, 'fee', 'key');
             $fee = (int) ($serviceFees[$appt['service_key']] ?? 0);
             paymongo_create_payment($sourceId, $fee * 100);
             // payment.paid webhook will fire next and update the DB below
+        } elseif ($donationsTableReady) {
+            $stmt = $pdo->prepare('SELECT id, amount FROM donations WHERE paymongo_source_id = ?');
+            $stmt->execute([$sourceId]);
+            $donation = $stmt->fetch();
+            if ($donation) {
+                paymongo_create_payment($sourceId, (int) $donation['amount'] * 100);
+            }
         }
     }
 } elseif ($eventType === 'payment.paid') {
@@ -99,9 +101,9 @@ if ($eventType === 'source.chargeable') {
         );
         $stmt->execute([$sourceId]);
 
-        if ($stmt->rowCount() === 0 && $certTableReady) {
+        if ($stmt->rowCount() === 0 && $donationsTableReady) {
             $stmt = $pdo->prepare(
-                "UPDATE certificate_requests SET payment_status = 'paid'
+                "UPDATE donations SET payment_status = 'paid'
                  WHERE paymongo_source_id = ? AND payment_status != 'paid'"
             );
             $stmt->execute([$sourceId]);
@@ -113,8 +115,8 @@ if ($eventType === 'source.chargeable') {
         $stmt = $pdo->prepare("UPDATE appointments SET status_reason = 'GCash payment failed' WHERE paymongo_source_id = ?");
         $stmt->execute([$sourceId]);
 
-        if ($stmt->rowCount() === 0 && $certTableReady) {
-            $stmt = $pdo->prepare("UPDATE certificate_requests SET status_reason = 'GCash payment failed' WHERE paymongo_source_id = ?");
+        if ($stmt->rowCount() === 0 && $donationsTableReady) {
+            $stmt = $pdo->prepare("UPDATE donations SET rejection_reason = 'GCash payment failed' WHERE paymongo_source_id = ?");
             $stmt->execute([$sourceId]);
         }
     }

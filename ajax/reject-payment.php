@@ -29,10 +29,10 @@ if (strlen($reason) > 255) {
     $reason = substr($reason, 0, 255);
 }
 
-// 'appointment' (default) or 'certificate' — see verify-payment.php for why
+// 'appointment' (default) or 'donation' — see verify-payment.php for why
 // this endpoint branches on table name instead of duplicating itself.
-$type = ($_POST['type'] ?? 'appointment') === 'certificate' ? 'certificate' : 'appointment';
-$table = $type === 'certificate' ? 'certificate_requests' : 'appointments';
+$type = ($_POST['type'] ?? 'appointment') === 'donation' ? 'donation' : 'appointment';
+$table = $type === 'donation' ? 'donations' : 'appointments';
 
 $treasurerId = (int) $_SESSION['user_id'];
 
@@ -63,11 +63,15 @@ try {
     );
     $update->execute([$treasurerId, $reason, $id]);
 
-    $serviceNames = array_column($services, 'name', 'key');
-    $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key']);
-    $message = "Your payment for the {$svcLabel} request could not be verified: {$reason}. Please visit the parish office to resolve this.";
+    if ($type === 'donation') {
+        $message = "Your donation of ₱" . number_format($appt['amount']) . " could not be verified: {$reason}. Please visit the parish office to resolve this.";
+    } else {
+        $serviceNames = array_column($services, 'name', 'key');
+        $svcLabel = $serviceNames[$appt['service_key']] ?? ucfirst($appt['service_key']);
+        $message = "Your payment for the {$svcLabel} request could not be verified: {$reason}. Please visit the parish office to resolve this.";
+    }
 
-    notify_user($pdo, $appt['user_id'], $message, 'payment', $type === 'appointment' ? $id : null, $type === 'certificate' ? $id : null);
+    notify_user($pdo, $appt['user_id'], $message, 'payment', $type === 'appointment' ? $id : null);
 
     $pdo->commit();
 

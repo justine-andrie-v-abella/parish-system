@@ -22,17 +22,23 @@ $icon         = trim($_POST['icon'] ?? '');
 $requirements = trim($_POST['requirements'] ?? '');
 $feesInput    = trim($_POST['fees'] ?? '');
 $category     = trim($_POST['category'] ?? 'sacrament');
-$certFieldsInput = trim($_POST['cert_fields'] ?? '');
 
 $allowedIcons = ['dove', 'flame', 'rings', 'cross', 'candle', 'vessel'];
-$allowedCategories = ['sacrament', 'certificate'];
+$allowedCategories = ['sacrament', 'mass_intention'];
 
 if (!in_array($category, $allowedCategories, true)) {
     $category = 'sacrament';
 }
 
-// The `category` column only exists once migration_add_certificate_requests.sql
-// has been run.
+// Mass Intention services are always instant-confirm with no documents
+// required (see ajax/book-appointment.php) — ignore any requirements text
+// server-side too, so the catalog can't end up with configured-but-unused
+// requirement rows if the client sent stale textarea content.
+if ($category === 'mass_intention') {
+    $requirements = '';
+}
+
+// The `category` column only exists once a category migration has been run.
 $hasCategory = $pdo->query(
     "SELECT 1 FROM information_schema.columns WHERE table_name = 'services' AND column_name = 'category'"
 )->fetchColumn() !== false;
@@ -153,21 +159,6 @@ try {
             $insFee = $pdo->prepare('INSERT INTO service_fees (service_key, label, amount, note, sort_order) VALUES (?, ?, ?, ?, ?)');
             foreach ($parsedFees as $i => $f) {
                 $insFee->execute([$key, $f['label'], $f['amount'], $f['note'], $i + 1]);
-            }
-        }
-    }
-
-    // Certificate request form fields — only touch this table if the
-    // migration has been applied.
-    if ($pdo->query("SELECT to_regclass('public.service_form_fields')")->fetchColumn() !== null) {
-        $delFields = $pdo->prepare('DELETE FROM service_form_fields WHERE service_key = ?');
-        $delFields->execute([$key]);
-
-        $fieldLines = array_values(array_filter(array_map('trim', explode("\n", $certFieldsInput)), fn($l) => $l !== ''));
-        if ($fieldLines) {
-            $insField = $pdo->prepare('INSERT INTO service_form_fields (service_key, field_label, sort_order) VALUES (?, ?, ?)');
-            foreach ($fieldLines as $i => $line) {
-                $insField->execute([$key, $line, $i + 1]);
             }
         }
     }

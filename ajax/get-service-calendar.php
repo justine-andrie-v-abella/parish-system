@@ -87,4 +87,8 @@ for ($d = 1; $d <= $daysInMonth; $d++) {
     $days[$date] = empty($openTimes) ? 'full' : 'available';
 }
 
-echo json_encode(['mode' => 'calendar', 'days' => $days]);
+echo json_encode([
+    'mode' => 'calendar',
+    'days' => $days,
+    'schedule_summary' => summarize_dated_schedule_rules($rules),
+]);

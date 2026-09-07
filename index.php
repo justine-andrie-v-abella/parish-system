@@ -92,7 +92,6 @@
         'vessel' => '<path d="M8 3h8M12 3v4"/><path d="M6 9c0-1.1 2.7-2 6-2s6 .9 6 2-2.7 8-6 10c-3.3-2-6-8.9-6-10Z"/>',
       ];
       foreach ($services as $svc):
-        if (($svc['category'] ?? 'sacrament') === 'certificate') continue; // certificates are requested after logging in, not shown publicly
       ?>
         <div class="service-card reveal">
           <div class="service-icon">
@@ -119,7 +118,6 @@
 
     <div class="req-list">
       <?php $i = 0; foreach ($services as $svc):
-        if (($svc['category'] ?? 'sacrament') === 'certificate') continue;
         $i++;
       ?>
         <div class="req-item reveal<?php echo $i === 1 ? ' open' : ''; ?>">

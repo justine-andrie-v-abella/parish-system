@@ -27,38 +27,24 @@ document.addEventListener('DOMContentLoaded', function () {
   var formErrorStep1 = document.getElementById('formErrorStep1');
   var goToPaymentBtn = document.getElementById('goToPayment');
 
-  // Booking calendar (per-service day picker) elements
+  // Booking calendar (per-service day picker) elements. Renders inline,
+  // right below the trigger field, in the normal page flow — not a
+  // floating popover — so it stays open across date picks and the slot
+  // list beneath it is visible at the same time.
   var apptDateLoading = document.getElementById('apptDateLoading');
   var bookCalTrigger = document.getElementById('bookCalTrigger');
   var bookCalTriggerText = document.getElementById('bookCalTriggerText');
   var bookCal = document.getElementById('bookCal');
+  var bookCalClose = document.getElementById('bookCalClose');
+  var bookCalScheduleNote = document.getElementById('bookCalScheduleNote');
   var bookCalTitle = document.getElementById('bookCalTitle');
   var bookCalGrid = document.getElementById('bookCalGrid');
   var bookCalPrev = document.getElementById('bookCalPrev');
   var bookCalNext = document.getElementById('bookCalNext');
+  var bookCalToday = document.getElementById('bookCalToday');
   var calMonth, calYear; // 1-12, full year — the month currently shown in the booking calendar
   var calDays = {}; // date string -> 'available' | 'full', for the month currently shown
   var datePickerRequestId = 0; // guards against a slow, stale fetch from a previously-opened service overwriting the current one
-
-  // Moved to <body> once so position:fixed coordinates aren't clipped by
-  // .modal-box's overflow-y:auto (same reasoning as .actions-menu elsewhere).
-  document.body.appendChild(bookCal);
-
-  function positionBookCal() {
-    var margin = 12;
-    var rect = bookCalTrigger.getBoundingClientRect();
-    var panelWidth = bookCal.offsetWidth || 300;
-    var panelHeight = bookCal.offsetHeight || 0;
-
-    var left = Math.max(margin, Math.min(rect.left, window.innerWidth - panelWidth - margin));
-    var top = rect.bottom + 8;
-    if (top + panelHeight > window.innerHeight - margin && rect.top - panelHeight - 8 > margin) {
-      top = rect.top - panelHeight - 8; // not enough room below — open upward
-    }
-
-    bookCal.style.left = left + 'px';
-    bookCal.style.top = top + 'px';
-  }
 
   function closeBookCal() {
     bookCal.classList.remove('open');
@@ -70,22 +56,24 @@ document.addEventListener('DOMContentLoaded', function () {
     bookCal.classList.add('open');
     bookCalTrigger.classList.add('open');
     bookCalTrigger.setAttribute('aria-expanded', 'true');
-    positionBookCal();
   }
 
-  bookCalTrigger.addEventListener('click', function (e) {
-    e.stopPropagation();
+  bookCalTrigger.addEventListener('click', function () {
     if (bookCal.classList.contains('open')) {
       closeBookCal();
     } else {
       openBookCal();
     }
   });
-  bookCal.addEventListener('click', function (e) { e.stopPropagation(); });
-  document.addEventListener('click', closeBookCal);
+  bookCalClose.addEventListener('click', closeBookCal);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeBookCal(); });
-  window.addEventListener('resize', closeBookCal);
-  window.addEventListener('scroll', closeBookCal, true);
+
+  bookCalToday.addEventListener('click', function () {
+    var now = new Date();
+    calMonth = now.getMonth() + 1;
+    calYear = now.getFullYear();
+    loadCalendarMonth();
+  });
 
   // Step 2 (documents) elements
   var backToDetailsBtn = document.getElementById('backToDetails');
@@ -175,7 +163,9 @@ document.addEventListener('DOMContentLoaded', function () {
     dateInput.value = dateStr;
     bookCalTriggerText.textContent = formatDateLabel(dateStr);
     bookCalTriggerText.classList.remove('bct-placeholder');
-    closeBookCal();
+    // Calendar stays open (not auto-closed) so the slot list that appears
+    // below it is visible at the same time — dismissed via the explicit
+    // "Close calendar" button instead.
     fetchSlots();
   }
 
@@ -227,7 +217,6 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (data) {
         calDays = data.days || {};
         renderCalendarGrid();
-        positionBookCal();
       })
       .catch(function () {
         bookCalGrid.innerHTML = '<div class="book-cal-empty-note">Couldn\'t load the calendar. Please try again.</div>';
@@ -256,6 +245,7 @@ document.addEventListener('DOMContentLoaded', function () {
     closeBookCal();
     bookCalTriggerText.textContent = 'Choose a date';
     bookCalTriggerText.classList.add('bct-placeholder');
+    bookCalScheduleNote.textContent = '';
 
     // Show neither control until we know which one applies — avoids a
     // flash of the plain date field for a service that turns out to have
@@ -273,6 +263,7 @@ document.addEventListener('DOMContentLoaded', function () {
         apptDateLoading.style.display = 'none';
         if (data.mode === 'calendar') {
           calDays = data.days || {};
+          bookCalScheduleNote.textContent = data.schedule_summary || '';
           bookCalTrigger.style.display = 'flex';
           renderCalendarGrid();
         } else {

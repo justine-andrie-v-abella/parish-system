@@ -105,3 +105,36 @@ function match_dated_schedule_rules(array $rules, string $dateStr): array
     }
     return $matches;
 }
+
+/**
+ * Plain-language summary of a service's weekly/nth_weekday schedule rows,
+ * e.g. "1st & 3rd Saturday, 8:00 AM" or "Every Friday, 2:00 PM" — shown
+ * directly in the booking calendar so a parishioner sees the pattern up
+ * front instead of having to click through months to discover it.
+ */
+function summarize_dated_schedule_rules(array $rules): string
+{
+    $dowLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    $ordinal = function (string $n): string {
+        if ($n === 'last') return 'Last';
+        $n = (int) $n;
+        if (in_array($n % 100, [11, 12, 13], true)) return $n . 'th';
+        return $n . (['th', 'st', 'nd', 'rd'][$n % 10] ?? 'th');
+    };
+
+    $parts = [];
+    foreach ($rules as $r) {
+        if (!in_array($r['rule_type'], ['weekly', 'nth_weekday'], true)) continue;
+        $time = $r['start_time'] ? date('g:i A', strtotime($r['start_time'])) : '';
+        $dow = $dowLabels[(int) $r['day_of_week']] ?? '';
+
+        if ($r['rule_type'] === 'weekly') {
+            $parts[] = trim("Every {$dow}, {$time}", ', ');
+        } else {
+            $occ = array_map('trim', explode(',', (string) $r['occurrences']));
+            $occLabel = implode(' & ', array_map($ordinal, $occ));
+            $parts[] = trim("{$occLabel} {$dow}, {$time}", ', ');
+        }
+    }
+    return implode(' · ', array_unique($parts));
+}

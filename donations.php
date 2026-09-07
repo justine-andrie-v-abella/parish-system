@@ -1,18 +1,16 @@
 <?php
-//parish-system\payments.php
+//parish-system\donations.php
 require_once 'includes/config.php';
-require_role(['treasurer']);
+require_role(['treasurer', 'priest']);
 require_once 'includes/db.php';
 require_once 'includes/calendar.php';
-require_once 'includes/payments.php';
 
-$tid = (int) $_SESSION['user_id'];
-$feeMap = get_fee_map($services);
-$serviceNames = array_column($services, 'name', 'key');
+$uid = (int) $_SESSION['user_id'];
+$isTreasurer = $_SESSION['role'] === 'treasurer'; // only the treasurer verifies/rejects — priest views only
 
 // ---------------- Notifications (header dropdown) ----------------
 $notifStmt = $pdo->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 5');
-$notifStmt->execute([$tid]);
+$notifStmt->execute([$uid]);
 $notifications = $notifStmt->fetchAll();
 $unreadCount = count(array_filter($notifications, fn($n) => !is_true($n['is_read'])));
 
@@ -40,8 +38,10 @@ $month = isset($_GET['month']) ? max(1, min(12, (int) $_GET['month'])) : (int) d
 $year  = isset($_GET['year'])  ? (int) $_GET['year'] : (int) date('Y');
 $calendarPanelHtml = render_calendar_fragment($pdo, $month, $year);
 
+$purposeLabels = ['general' => 'General Donation', 'maintenance' => 'Church Maintenance', 'charity' => 'Charity', 'mass_activities' => 'Mass/Parish Activities'];
+
 // ---------------- Filter ----------------
-$filterLabels = ['pending' => 'Pending', 'paid' => 'Paid', 'rejected' => 'Rejected', 'cash' => 'Cash', 'gcash' => 'GCash', 'all' => 'All'];
+$filterLabels = ['pending' => 'Pending', 'paid' => 'Paid', 'rejected' => 'Rejected', 'all' => 'All'];
 $allowedFilters = array_keys($filterLabels);
 $filter = in_array($_GET['filter'] ?? 'pending', $allowedFilters, true) ? ($_GET['filter'] ?? 'pending') : 'pending';
 
@@ -49,23 +49,13 @@ $where = '1=1';
 if ($filter === 'pending')  $where = "payment_status = 'unpaid'";
 if ($filter === 'paid')     $where = "payment_status = 'paid'";
 if ($filter === 'rejected') $where = "payment_status = 'rejected'";
-if ($filter === 'cash')     $where = "payment_method = 'cash'";
-if ($filter === 'gcash')    $where = "payment_method = 'gcash'";
 
-// Appointments awaiting document review never had a payment method chosen
-// yet (see migration_add_appointment_documents.sql) — nothing to verify
-// until the parishioner actually submits payment, so keep them out of
-// this queue entirely. Donations have their own separate log (donations.php)
-// since they aren't tied to a service/appointment at all.
-$sql = "SELECT a.id, a.user_id, a.service_key, a.payment_status, a.payment_method, a.reference_number,
-               a.payment_screenshot, a.receipt_number, a.created_at, u.full_name,
-               a.appointment_date::text AS appointment_date, a.appointment_time::text AS appointment_time
-        FROM appointments a JOIN users u ON u.id = a.user_id WHERE ($where) AND a.payment_method IS NOT NULL
-        ORDER BY created_at DESC LIMIT 200";
+$rows = $pdo->query(
+    "SELECT d.*, u.full_name FROM donations d JOIN users u ON u.id = d.user_id
+     WHERE ($where) ORDER BY d.created_at DESC LIMIT 200"
+)->fetchAll();
 
-$rows = $pdo->query($sql)->fetchAll();
-
-$page_title = 'Payment Verification — ' . $parish['name'];
+$page_title = 'Donations — ' . $parish['name'];
 require_once 'includes/dashboard-header.php';
 ?>
 
@@ -100,9 +90,9 @@ require_once 'includes/dashboard-header.php';
 </style>
 
 <div class="page-head">
-  <span class="eyebrow">Treasurer</span>
-  <h1>Payment Verification</h1>
-  <p>Review submitted payments, verify GCash proofs against reference numbers, and confirm cash collected at the office.</p>
+  <span class="eyebrow"><?php echo $isTreasurer ? 'Treasurer' : 'Priest'; ?></span>
+  <h1>Donations</h1>
+  <p><?php echo $isTreasurer ? 'Review submitted donations, verify GCash and manual proofs, and confirm receipt.' : 'A read-only view of donations given to the parish. The treasurer handles verification.'; ?></p>
 </div>
 
 <div class="actions-dropdown" style="margin-bottom:22px;">
@@ -119,25 +109,22 @@ require_once 'includes/dashboard-header.php';
 
 <div class="requests-table-wrap">
   <?php if (empty($rows)): ?>
-    <div class="requests-empty">No payments in this view.</div>
+    <div class="requests-empty">No donations in this view.</div>
   <?php else: ?>
     <table class="requests-table">
       <thead>
         <tr>
-          <th>Request</th><th>Parishioner</th><th>Service</th><th>Amount</th>
+          <th>Donor</th><th>Purpose</th><th>Amount</th>
           <th>Method</th><th>Reference</th><th>Status</th><th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($rows as $r):
-          $detail = date('F j, Y', strtotime($r['appointment_date'])) . ($r['appointment_time'] ? ' · ' . date('g:i A', strtotime($r['appointment_time'])) : '');
-        ?>
+        <?php foreach ($rows as $r): ?>
           <tr>
-            <td>#<?php echo $r['id']; ?> <span style="font-size:10px; color:var(--ink-soft); text-transform:uppercase;">Appt</span></td>
-            <td><?php echo htmlspecialchars($r['full_name']); ?></td>
-            <td class="svc-cell"><?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?><br><span style="font-size:11px; color:var(--ink-soft);"><?php echo htmlspecialchars($detail); ?></span></td>
-            <td>₱<?php echo number_format(payment_amount($r['service_key'], $feeMap)); ?></td>
-            <td><?php if ($r['payment_method']): ?><span class="pm-chip <?php echo $r['payment_method']; ?>"><?php echo strtoupper($r['payment_method']); ?></span><?php else: ?>—<?php endif; ?></td>
+            <td><?php echo htmlspecialchars($r['donor_name'] ?: 'Anonymous'); ?><br><span style="font-size:11px; color:var(--ink-soft);"><?php echo htmlspecialchars($r['full_name']); ?> · <?php echo htmlspecialchars($r['email']); ?></span></td>
+            <td><?php echo htmlspecialchars($purposeLabels[$r['purpose']] ?? ucfirst($r['purpose'])); ?><?php if ($r['message']): ?><br><span style="font-size:11px; color:var(--ink-soft); font-style:italic;">“<?php echo htmlspecialchars($r['message']); ?>”</span><?php endif; ?></td>
+            <td>₱<?php echo number_format($r['amount']); ?></td>
+            <td><span class="pm-chip <?php echo htmlspecialchars($r['payment_method']); ?>"><?php echo strtoupper($r['payment_method']); ?></span></td>
             <td>
               <?php echo $r['reference_number'] ? htmlspecialchars($r['reference_number']) : '—'; ?>
               <?php if ($r['payment_screenshot']): ?>
@@ -151,7 +138,9 @@ require_once 'includes/dashboard-header.php';
               <?php endif; ?>
             </td>
             <td>
-              <?php if ($r['payment_status'] === 'unpaid'): ?>
+              <?php if (!$isTreasurer): ?>
+                <span style="font-size:11px; color:var(--ink-soft);">View only</span>
+              <?php elseif ($r['payment_status'] === 'unpaid'): ?>
                 <div class="actions-dropdown">
                   <button type="button" class="actions-trigger" aria-haspopup="true" aria-expanded="false">
                     Actions
@@ -160,20 +149,20 @@ require_once 'includes/dashboard-header.php';
                   <div class="actions-menu">
                     <button type="button" class="verify-btn"
                     data-verify-id="<?php echo $r['id']; ?>"
-                    data-type="appointment"
-                    data-parishioner="<?php echo htmlspecialchars($r['full_name']); ?>"
-                    data-service="<?php echo htmlspecialchars($serviceNames[$r['service_key']] ?? ucfirst($r['service_key'])); ?>"
-                    data-amount="<?php echo number_format(payment_amount($r['service_key'], $feeMap)); ?>"
-                    data-method="<?php echo htmlspecialchars($r['payment_method'] ?? ''); ?>"
+                    data-type="donation"
+                    data-parishioner="<?php echo htmlspecialchars($r['donor_name'] ?: $r['full_name']); ?>"
+                    data-service="Donation — <?php echo htmlspecialchars($purposeLabels[$r['purpose']] ?? ucfirst($r['purpose'])); ?>"
+                    data-amount="<?php echo number_format($r['amount']); ?>"
+                    data-method="<?php echo htmlspecialchars($r['payment_method']); ?>"
                     data-reference="<?php echo htmlspecialchars($r['reference_number'] ?? ''); ?>"
                     data-screenshot="<?php echo htmlspecialchars($r['payment_screenshot'] ?? ''); ?>"
-                    data-date="<?php echo htmlspecialchars($detail); ?>"
-                    data-suggested-receipt="<?php echo htmlspecialchars(generate_receipt_number($r['id'])); ?>">View &amp; Verify</button>
-                    <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>" data-type="appointment">Reject</button>
+                    data-date="<?php echo htmlspecialchars(date('F j, Y', strtotime($r['created_at']))); ?>"
+                    data-suggested-receipt="<?php echo htmlspecialchars('RCPT-' . date('Y') . '-D' . str_pad((string) $r['id'], 5, '0', STR_PAD_LEFT)); ?>">View &amp; Verify</button>
+                    <button type="button" class="reject-btn" data-reject-id="<?php echo $r['id']; ?>" data-type="donation">Reject</button>
                   </div>
                 </div>
               <?php elseif ($r['payment_status'] === 'paid'): ?>
-                <a href="receipt.php?id=<?php echo $r['id']; ?>&type=appointment" target="_blank" class="btn btn-outline btn-sm">Receipt</a>
+                <a href="receipt.php?id=<?php echo $r['id']; ?>&type=donation" target="_blank" class="btn btn-outline btn-sm">Receipt</a>
               <?php else: ?>
                 <span style="font-size:11px; color:var(--ink-soft);">—</span>
               <?php endif; ?>
@@ -185,6 +174,7 @@ require_once 'includes/dashboard-header.php';
   <?php endif; ?>
 </div>
 
+<?php if ($isTreasurer): ?>
 <!-- Verify details modal -->
 <div class="reject-modal-overlay" id="verifyModal">
   <div class="reject-modal-box verify-modal-box">
@@ -192,37 +182,37 @@ require_once 'includes/dashboard-header.php';
     <p style="font-size:13px; color:var(--ink-soft); margin-bottom:16px;">Check the submitted proof against the amount and reference number before confirming.</p>
 
     <div class="vd-rows">
-      <div class="vd-row"><span>Request</span><span id="vdRequest">—</span></div>
+      <div class="vd-row"><span>Donor</span><span id="vdRequest">—</span></div>
       <div class="vd-row"><span>Parishioner</span><span id="vdParishioner">—</span></div>
-      <div class="vd-row"><span>Service</span><span id="vdService">—</span></div>
-      <div class="vd-row"><span>Details</span><span id="vdDate">—</span></div>
-      <div class="vd-row"><span>Amount Due</span><span id="vdAmount">—</span></div>
+      <div class="vd-row"><span>Purpose</span><span id="vdService">—</span></div>
+      <div class="vd-row"><span>Date</span><span id="vdDate">—</span></div>
+      <div class="vd-row"><span>Amount</span><span id="vdAmount">—</span></div>
       <div class="vd-row"><span>Payment Method</span><span id="vdMethod">—</span></div>
       <div class="vd-row" id="vdReferenceRow"><span>Reference Number</span><span id="vdReference">—</span></div>
     </div>
 
     <div id="vdScreenshotWrap" style="display:none; margin-top:14px;">
-      <p style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px;">GCash Screenshot</p>
+      <p style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px;">Payment Screenshot</p>
       <a id="vdScreenshotLink" href="#" target="_blank" rel="noopener">
-        <img id="vdScreenshotImg" src="" alt="Submitted GCash payment screenshot" style="width:100%; max-height:260px; object-fit:contain; border-radius:12px; border:1px solid var(--line); background:var(--cream-deep);">
+        <img id="vdScreenshotImg" src="" alt="Submitted payment screenshot" style="width:100%; max-height:260px; object-fit:contain; border-radius:12px; border:1px solid var(--line); background:var(--cream-deep);">
       </a>
       <p style="font-size:11px; color:var(--ink-soft); margin-top:6px;">Click the image to open full size in a new tab.</p>
     </div>
 
     <div id="vdNoScreenshot" style="display:none; margin-top:14px; padding:14px; background:var(--cream-deep); border-radius:12px; font-size:12.5px; color:var(--ink-soft);">
-      No screenshot was submitted — this is likely a cash payment collected at the office. Verify once cash is received.
+      No screenshot was submitted — this is a manually-confirmed payment (Maya/PayPal/Card). Verify once the office confirms it was received.
     </div>
 
     <div style="margin-top:14px;">
       <label for="vdReceiptInput" style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); display:block; margin-bottom:6px;">Receipt Number</label>
-      <input type="text" id="vdReceiptInput" placeholder="e.g. OR-2026-0001"
+      <input type="text" id="vdReceiptInput" placeholder="e.g. RCPT-2026-D0001"
         style="width:100%; border:1px solid var(--line); border-radius:12px; padding:11px 14px; font-family:'IBM Plex Mono',monospace; font-size:13.5px;">
       <p style="font-size:11px; color:var(--ink-soft); margin-top:6px;">Enter the number from the physical receipt you're issuing. We've suggested one below, but overwrite it if you're using a printed booklet.</p>
     </div>
 
     <div class="vd-confirm-check">
       <input type="checkbox" id="vdConfirmCheck">
-      <label for="vdConfirmCheck">I have checked the amount, reference number, and proof of payment, and confirm this payment was received in full.</label>
+      <label for="vdConfirmCheck">I have checked the amount, reference number, and proof of payment, and confirm this donation was received in full.</label>
     </div>
 
     <p class="reject-error" id="verifyError"></p>
@@ -237,17 +227,18 @@ require_once 'includes/dashboard-header.php';
 <!-- Reject reason modal -->
 <div class="reject-modal-overlay" id="rejectModal">
   <div class="reject-modal-box">
-    <h3>Reject this payment</h3>
-    <p style="font-size:13px; color:var(--ink-soft); margin-bottom:10px;">This will notify the parishioner and ask them to visit the office.</p>
-    <textarea id="rejectReason" placeholder="e.g. Reference number doesn't match any GCash transaction, screenshot unreadable, amount doesn't match…"></textarea>
+    <h3>Reject this donation</h3>
+    <p style="font-size:13px; color:var(--ink-soft); margin-bottom:10px;">This will notify the donor and ask them to visit the office.</p>
+    <textarea id="rejectReason" placeholder="e.g. Reference number doesn't match any transaction, screenshot unreadable, amount doesn't match…"></textarea>
     <p class="reject-error" id="rejectError"></p>
     <div class="reject-modal-actions">
       <button type="button" class="btn btn-outline btn-sm" id="rejectCancel">Cancel</button>
-      <button type="button" class="btn btn-gold btn-sm" id="rejectConfirm">Reject Payment</button>
+      <button type="button" class="btn btn-gold btn-sm" id="rejectConfirm">Reject Donation</button>
     </div>
   </div>
 </div>
 
 <script src="assets/js/payments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/payments.js'); ?>"></script>
+<?php endif; ?>
 
 <?php require_once 'includes/dashboard-footer.php'; ?>

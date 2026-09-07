@@ -14,11 +14,15 @@ $sidebarLinksByRole = [
         ['href' => 'dashboard-parishioner.php', 'label' => 'Dashboard', 'match' => ['dashboard-parishioner.php'],
             'icon' => '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'],
         ['href' => 'intentions.php', 'label' => 'My Intentions', 'match' => ['intentions.php'],
-            'icon' => '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'],
+            'icon' => '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+            'submenu' => [
+                ['href' => 'intentions.php?tab=mass', 'label' => 'Mass Intentions', 'tab' => 'mass'],
+                ['href' => 'intentions.php?tab=sacraments', 'label' => 'Sacraments', 'tab' => 'sacraments'],
+            ]],
         ['href' => 'requests.php', 'label' => 'View Requests', 'match' => ['requests.php'],
             'icon' => '<path d="M3 6h18M3 12h18M3 18h18"/>'],
-        ['href' => 'certificates.php', 'label' => 'Certificates', 'match' => ['certificates.php'],
-            'icon' => '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>'],
+        ['href' => 'announcements.php', 'label' => 'Announcements', 'match' => ['announcements.php'],
+            'icon' => '<path d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6l-4 4H4a1 1 0 0 0-1 1Z"/><path d="M16 8a4 4 0 0 1 0 8"/><path d="M19 5a8 8 0 0 1 0 14"/>'],
         ['href' => 'coming-soon.php?feature=Chat+with+Secretary', 'label' => 'Chat with Secretary', 'match' => [],
             'icon' => '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>'],
     ],
@@ -27,26 +31,30 @@ $sidebarLinksByRole = [
             'icon' => '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'],
         ['href' => 'payments.php', 'label' => 'Payment Verification', 'match' => ['payments.php'],
             'icon' => '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'],
+        ['href' => 'donations.php', 'label' => 'Donations', 'match' => ['donations.php'],
+            'icon' => '<path d="M12 21s-7-4.5-9.5-9C.5 8 2 4 6 4c2 0 3.5 1 4 2 .5-1 2-2 4-2 4 0 5.5 4 3.5 8-2.5 4.5-9.5 9-9.5 9Z"/>'],
     ],
     'secretary' => [
         ['href' => 'dashboard-secretary.php', 'label' => 'Dashboard', 'match' => ['dashboard-secretary.php'],
             'icon' => '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'],
         ['href' => 'queue.php', 'label' => 'Appointment Queue', 'match' => ['queue.php'],
             'icon' => '<path d="M3 6h18M3 12h18M3 18h18"/>'],
-        ['href' => 'certificate-queue.php', 'label' => 'Certificate Requests', 'match' => ['certificate-queue.php'],
-            'icon' => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'],
         ['href' => 'catalog.php', 'label' => 'Catalog', 'match' => ['catalog.php'],
             'icon' => '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>'],
+        ['href' => 'announcements-manage.php', 'label' => 'Announcements', 'match' => ['announcements-manage.php'],
+            'icon' => '<path d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6l-4 4H4a1 1 0 0 0-1 1Z"/><path d="M16 8a4 4 0 0 1 0 8"/><path d="M19 5a8 8 0 0 1 0 14"/>'],
     ],
     'priest' => [
         ['href' => 'dashboard-priest.php', 'label' => 'Dashboard', 'match' => ['dashboard-priest.php'],
             'icon' => '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'],
         ['href' => 'queue.php', 'label' => 'Intentions', 'match' => ['queue.php'],
             'icon' => '<path d="M3 6h18M3 12h18M3 18h18"/>'],
-        ['href' => 'certificate-queue.php', 'label' => 'Certificate Requests', 'match' => ['certificate-queue.php'],
-            'icon' => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'],
         ['href' => 'catalog.php', 'label' => 'Catalog', 'match' => ['catalog.php'],
             'icon' => '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>'],
+        ['href' => 'announcements-manage.php', 'label' => 'Announcements', 'match' => ['announcements-manage.php'],
+            'icon' => '<path d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6l-4 4H4a1 1 0 0 0-1 1Z"/><path d="M16 8a4 4 0 0 1 0 8"/><path d="M19 5a8 8 0 0 1 0 14"/>'],
+        ['href' => 'donations.php', 'label' => 'Donations', 'match' => ['donations.php'],
+            'icon' => '<path d="M12 21s-7-4.5-9.5-9C.5 8 2 4 6 4c2 0 3.5 1 4 2 .5-1 2-2 4-2 4 0 5.5 4 3.5 8-2.5 4.5-9.5 9-9.5 9Z"/>'],
     ],
 ];
 
@@ -84,14 +92,32 @@ $sidebarLinks = $sidebarLinksByRole[$role] ?? [];
   <nav class="sidebar-nav">
     <?php foreach ($sidebarLinks as $link):
         $isActive = in_array($current, $link['match'], true);
+
+        if (!empty($link['submenu'])):
+            $activeTab = $_GET['tab'] ?? 'mass';
     ?>
+      <div class="sidebar-link-group<?php echo $isActive ? ' expanded active' : ''; ?>">
+        <button type="button" class="sidebar-link sidebar-link-parent" data-submenu-toggle data-tooltip="<?php echo htmlspecialchars($link['label']); ?>">
+          <span class="sidebar-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><?php echo $link['icon']; ?></svg>
+          </span>
+          <span><?php echo htmlspecialchars($link['label']); ?></span>
+          <svg class="sidebar-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="sidebar-submenu">
+          <?php foreach ($link['submenu'] as $sub): ?>
+            <a href="<?php echo htmlspecialchars($sub['href']); ?>" class="sidebar-sublink<?php echo ($isActive && $activeTab === $sub['tab']) ? ' active' : ''; ?>"><?php echo htmlspecialchars($sub['label']); ?></a>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    <?php else: ?>
       <a href="<?php echo htmlspecialchars($link['href']); ?>" class="sidebar-link<?php echo $isActive ? ' active' : ''; ?>" data-tooltip="<?php echo htmlspecialchars($link['label']); ?>">
         <span class="sidebar-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><?php echo $link['icon']; ?></svg>
         </span>
         <span><?php echo htmlspecialchars($link['label']); ?></span>
       </a>
-    <?php endforeach; ?>
+    <?php endif; endforeach; ?>
   </nav>
 
   <div class="sidebar-footer">

@@ -140,8 +140,8 @@ function positionDropdown(panel, btn) {
 }
 
 // ---------------- Generic "Actions" / "Filter" / "Export" dropdowns ----------------
-// Shared across every page that has one (queue.php, certificate-queue.php,
-// payments.php, ...) so the same markup/behavior works everywhere without
+// Shared across every page that has one (queue.php, payments.php,
+// donations.php, ...) so the same markup/behavior works everywhere without
 // each page re-implementing it. The menu is repositioned with JS and moved
 // to <body> rather than relying on CSS position:absolute, because several
 // of these triggers live inside a table wrapper that needs
